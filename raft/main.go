@@ -27,6 +27,7 @@ func main() {
 
 	nodeID := mustEnv("NODE_ID")
 	grpcPort := envOr("GRPC_PORT", "50051")
+	httpPort := envOr("HTTP_PORT", "8080") // state observer polls this
 	peerAddrs := strings.Split(mustEnv("PEER_ADDRS"), ",")
 
 	// ── Dial peers ───────────────────────────────────────────────────────────
@@ -78,7 +79,17 @@ func main() {
 		}
 	}()
 
-	log.Info("coordinator started", "id", nodeID, "port", grpcPort, "peers", peerAddrs)
+	// HTTP state server — polled by the Python State Observer for /state and /health.
+	httpServer := raft.NewHTTPServer(node)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := httpServer.Serve(ctx, ":"+httpPort); err != nil {
+			log.Error("http state server error", "err", err)
+		}
+	}()
+
+	log.Info("coordinator started", "id", nodeID, "grpc_port", grpcPort, "http_port", httpPort, "peers", peerAddrs)
 	wg.Wait()
 
 	// ── Clean up peer connections ─────────────────────────────────────────────

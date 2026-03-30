@@ -422,3 +422,63 @@ func randomElectionTimeout() time.Duration {
 func peerID(i int) string {
 	return "peer-" + string(rune('A'+i))
 }
+
+// ── State observation ─────────────────────────────────────────────────────────
+
+// NodeState.String returns a human-readable role name for JSON serialization.
+func (s NodeState) String() string {
+	switch s {
+	case Follower:
+		return "follower"
+	case Candidate:
+		return "candidate"
+	case Leader:
+		return "leader"
+	default:
+		return "unknown"
+	}
+}
+
+// NodeSnapshot is a point-in-time view of a node's Raft state.
+// Serialized as JSON by the HTTP /state endpoint consumed by the Python State Observer.
+type NodeSnapshot struct {
+	NodeID      string         `json:"node_id"`
+	State       string         `json:"state"`
+	CurrentTerm int            `json:"current_term"`
+	VotedFor    string         `json:"voted_for"`
+	CommitIndex int            `json:"commit_index"`
+	LastApplied int            `json:"last_applied"`
+	LogLength   int            `json:"log_length"`
+	MatchIndex  map[string]int `json:"match_index,omitempty"` // leader only: peer → highest replicated index
+	NextIndex   map[string]int `json:"next_index,omitempty"`  // leader only: peer → next index to send
+}
+
+// Snapshot returns a consistent copy of the node's observable state.
+// Safe to call concurrently; acquires the node mutex internally.
+func (n *Node) Snapshot() NodeSnapshot {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	snap := NodeSnapshot{
+		NodeID:      n.id,
+		State:       n.state.String(),
+		CurrentTerm: n.currentTerm,
+		VotedFor:    n.votedFor,
+		CommitIndex: n.commitIndex,
+		LastApplied: n.lastApplied,
+		LogLength:   len(n.logEntries),
+	}
+
+	if n.state == Leader {
+		snap.MatchIndex = make(map[string]int, len(n.matchIndex))
+		for k, v := range n.matchIndex {
+			snap.MatchIndex[k] = v
+		}
+		snap.NextIndex = make(map[string]int, len(n.nextIndex))
+		for k, v := range n.nextIndex {
+			snap.NextIndex[k] = v
+		}
+	}
+
+	return snap
+}
