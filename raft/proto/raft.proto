@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package raft;
 
-option go_package = "github.com/yourorg/raft-coordinator/proto/raftpb";
+option go_package = "github.com/shurui-liu/driftless/raft/proto/raftpb";
 
 // ── RequestVote ───────────────────────────────────────────────────────────────
 

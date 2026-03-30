@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/yourorg/raft-coordinator/proto/raftpb"
+	pb "github.com/shurui-liu/driftless/raft/proto/raftpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"

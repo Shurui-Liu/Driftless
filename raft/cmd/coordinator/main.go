@@ -19,7 +19,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/yourorg/raft-coordinator/raft"
+	"github.com/shurui-liu/driftless/raft"
 )
 
 func main() {
