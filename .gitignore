@@ -4,6 +4,11 @@
 *.tfstate.backup
 *.tfplan
 .terraform.lock.hcl
+terraform.tfvars
+
+# chaos-bench histories
+chaos-bench/histories/
+chaos-bench/.venv/
 
 # macOS
 .DS_Store

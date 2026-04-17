@@ -41,7 +41,7 @@ func NewRegistry(db *dynamodb.Client, table string) *Registry {
 }
 
 // Register writes this node's entry. Safe to call repeatedly; it overwrites.
-func (r *Registry) Register(ctx context.Context, self Info) error {
+func (r *Registry) Register(ctx context.Context, self Info, isLeader bool) error {
 	now := time.Now().Unix()
 	expires := now + int64(r.ttl.Seconds())
 	_, err := r.db.PutItem(ctx, &dynamodb.PutItemInput{
@@ -52,13 +52,18 @@ func (r *Registry) Register(ctx context.Context, self Info) error {
 			"http_addr":    &types.AttributeValueMemberS{Value: self.HTTPAddr},
 			"heartbeat_ts": &types.AttributeValueMemberN{Value: strconv.FormatInt(now, 10)},
 			"expires_at":   &types.AttributeValueMemberN{Value: strconv.FormatInt(expires, 10)},
+			"is_leader":    &types.AttributeValueMemberBOOL{Value: isLeader},
 		},
 	})
 	return err
 }
 
 // StartHeartbeat refreshes the self record every interval until ctx is done.
-func (r *Registry) StartHeartbeat(ctx context.Context, self Info, interval time.Duration) {
+// leaderFn is polled on each tick so the record reflects current leadership —
+// chaos/benchmark tools can then discover the leader without VPC access.
+func (r *Registry) StartHeartbeat(
+	ctx context.Context, self Info, interval time.Duration, leaderFn func() bool,
+) {
 	go func() {
 		t := time.NewTicker(interval)
 		defer t.Stop()
@@ -67,7 +72,11 @@ func (r *Registry) StartHeartbeat(ctx context.Context, self Info, interval time.
 			case <-ctx.Done():
 				return
 			case <-t.C:
-				if err := r.Register(ctx, self); err != nil && !errors.Is(err, context.Canceled) {
+				isLeader := false
+				if leaderFn != nil {
+					isLeader = leaderFn()
+				}
+				if err := r.Register(ctx, self, isLeader); err != nil && !errors.Is(err, context.Canceled) {
 					// Best-effort; TTL will expire the row if we stay dead.
 					fmt.Fprintf(os.Stderr, "peers: heartbeat failed: %v\n", err)
 				}

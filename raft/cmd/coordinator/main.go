@@ -78,6 +78,8 @@ func main() {
 	// Local: parse PEER_ADDRS directly (no AWS needed).
 
 	var resolved []resolvedPeer
+	var peersRegistry *peersreg.Registry
+	var peersSelf peersreg.Info
 
 	if table := os.Getenv("PEERS_TABLE"); table != "" {
 		reg := peersreg.NewRegistry(dynamodb.NewFromConfig(loadAWS()), table)
@@ -92,11 +94,12 @@ func main() {
 			GRPCAddr: selfIP + ":" + grpcPort,
 			HTTPAddr: selfIP + ":" + httpPort,
 		}
-		if err := reg.Register(ctx, self); err != nil {
+		if err := reg.Register(ctx, self, false); err != nil {
 			log.Error("register self in peers table", "err", err)
 			os.Exit(1)
 		}
-		reg.StartHeartbeat(ctx, self, 10*time.Second)
+		peersRegistry = reg
+		peersSelf = self
 		log.Info("registered self", "node_id", nodeID, "grpc_addr", self.GRPCAddr)
 
 		expected := splitPeers(os.Getenv("EXPECTED_PEER_IDS"))
@@ -142,6 +145,11 @@ func main() {
 
 	// ── Build the Raft node ───────────────────────────────────────────────────
 	node := raft.NewNode(nodeID, peers, log)
+
+	// Peers heartbeat now that node exists; each tick publishes live leadership.
+	if peersRegistry != nil {
+		peersRegistry.StartHeartbeat(ctx, peersSelf, 10*time.Second, node.IsLeader)
+	}
 
 	var wg sync.WaitGroup
 

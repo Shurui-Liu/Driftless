@@ -21,6 +21,15 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+locals {
+  # Default to the voclabs LabRole when no explicit ARN is supplied.
+  lab_role_arn = (
+    var.lab_role_arn != ""
+    ? var.lab_role_arn
+    : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  )
+}
+
 # ── Networking ────────────────────────────────────────────────────────────────
 # Dev: single AZ to keep NAT gateway costs low.
 
@@ -41,7 +50,7 @@ module "storage" {
   environment = "dev"
   project     = "raft-coordinator"
 
-  lab_role_arn                = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  lab_role_arn                = local.lab_role_arn
   task_payload_retention_days = 7
   raft_log_retention_days     = 30
 }
@@ -88,7 +97,9 @@ module "ecs_cluster" {
 
   # Coordinator config
   coordinator_image  = "${module.storage.coordinator_ecr_url}:latest"
-  coordinator_count  = 1   # single node for dev; set to 3 in prod
+  # Start at 1 for the first apply (images don't exist yet; 3x restart churn).
+  # After `docker push`, bump to 3 and re-apply for the experiments.
+  coordinator_count  = var.coordinator_count
   coordinator_cpu    = 512
   coordinator_memory = 1024
 

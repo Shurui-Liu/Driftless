@@ -1,15 +1,18 @@
 # Driftless Deployment Guide
 
-Deploys the full Driftless system to AWS using a student (AWS Academy) account.
+Deploys the full Driftless system to AWS. Defaults target an AWS Academy
+(voclabs) Learner Lab account, but any account with an ECS task role works —
+see *Non-sandbox accounts* below.
 
 ## Prerequisites
 
-- AWS CLI v2 configured with your Learner Lab credentials
+- AWS CLI v2 configured with credentials for the target account
 - Terraform >= 1.6
-- Docker
-- Go 1.25+ (only needed if building locally without Docker)
+- Docker (with `buildx` for cross-arch builds from Apple Silicon)
+- Go 1.25+ (only needed to build binaries outside Docker)
+- Python 3.10+ (only for `chaos-bench/` experiment client)
 
-Verify your setup:
+Verify:
 
 ```bash
 aws sts get-caller-identity
@@ -17,96 +20,92 @@ terraform -version
 docker info
 ```
 
-## Step 1: Get your AWS account ID
+## Step 1: Set shell variables
 
 ```bash
 export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 export AWS_REGION=us-east-1
-echo "Account: $ACCOUNT_ID"
+echo "Account: $ACCOUNT_ID  Region: $AWS_REGION"
 ```
 
-## Step 2: Configure Terraform
+## Step 2: First Terraform apply (infra only, no images yet)
 
-Edit `terraform/environments/dev/main.tf` line 44 — replace `YOUR_ACCOUNT_ID` with your actual account ID:
-
-```hcl
-lab_role_arn = "arn:aws:iam::${ACCOUNT_ID}:role/LabRole"
-```
-
-The double colon is correct (IAM ARNs have no region field). Note that the role name on AWS Academy is `LabRole` (capital L and R).
-
-## Step 3: Create infrastructure (first apply)
-
-This creates the VPC, subnets, SQS queues, DynamoDB tables, S3 buckets, ECR repositories, and ECS cluster. ECS services will fail to start because no images are pushed yet — that's expected.
+Terraform discovers the account ID automatically via `aws_caller_identity`, so
+no hand-editing is required for voclabs. This first apply creates the VPC,
+subnets, SQS queues, DynamoDB tables, S3 buckets, ECR repositories, and ECS
+cluster. ECS services will fail to start because no images exist yet — that's
+fine. `coordinator_count` defaults to `1` to avoid 3× restart churn during this
+bootstrap phase.
 
 ```bash
 cd terraform/environments/dev
 terraform init
-terraform apply
+terraform apply        # review and approve
 ```
 
-Save the outputs — you'll need the ECR URLs:
+Capture outputs:
 
 ```bash
 terraform output
 ```
 
-## Step 4: Build and push Docker images
-
-Log in to ECR:
+## Step 3: Build and push Docker images
 
 ```bash
 aws ecr get-login-password --region $AWS_REGION | \
-  docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+  docker login --username AWS --password-stdin \
+  $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 ```
 
-Build and push all four images from the project root:
+All four images build from a subdirectory (`raft/`, `worker-node/`, etc.), not
+from the repo root — each has its own `go.mod`. On Apple Silicon use
+`docker buildx build --platform linux/amd64 --push` in a single step:
 
 ```bash
-cd /path/to/Driftless
+REG=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
 # Coordinator
-docker build -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-coordinator:latest ./raft
-docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-coordinator:latest
+( cd raft && docker buildx build --platform linux/amd64 --push \
+    -t $REG/raft-coordinator-dev-coordinator:latest . )
 
 # Worker
-docker build -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-worker:latest ./worker-node
-docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-worker:latest
+( cd worker-node && docker buildx build --platform linux/amd64 --push \
+    -t $REG/raft-coordinator-dev-worker:latest . )
 
 # Ingest API
-docker build -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-ingest:latest ./task-ingest-api
-docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-ingest:latest
+( cd task-ingest-api && docker buildx build --platform linux/amd64 --push \
+    -t $REG/raft-coordinator-dev-ingest:latest . )
 
 # State Observer
-docker build -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-observer:latest ./state-observer
-docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/raft-coordinator-dev-observer:latest
+( cd state-observer && docker buildx build --platform linux/amd64 --push \
+    -t $REG/raft-coordinator-dev-observer:latest . )
 ```
 
-> If building on Apple Silicon (M1/M2/M3), add `--platform linux/amd64` to each `docker build` command since ECS Fargate runs x86_64.
+On x86_64 hosts you can use the usual `docker build` + `docker push` split.
 
-## Step 5: Deploy ECS services
-
-Re-apply Terraform so ECS pulls the newly pushed images:
+## Step 4: Second Terraform apply (ECS picks up the images)
 
 ```bash
 cd terraform/environments/dev
 terraform apply
 ```
 
-Force a new deployment if tasks are stuck on the old (missing) image:
+If tasks are still running the old/missing image, force a fresh deployment:
 
 ```bash
 CLUSTER=$(terraform output -raw ecs_cluster_name)
 
-aws ecs update-service --cluster $CLUSTER --service raft-coordinator-dev-coordinator-a --force-new-deployment
-aws ecs update-service --cluster $CLUSTER --service raft-coordinator-dev-worker --force-new-deployment
-aws ecs update-service --cluster $CLUSTER --service raft-coordinator-dev-ingest --force-new-deployment
-aws ecs update-service --cluster $CLUSTER --service raft-coordinator-dev-observer --force-new-deployment
+aws ecs update-service --cluster $CLUSTER \
+  --service raft-coordinator-dev-coordinator-a --force-new-deployment
+aws ecs update-service --cluster $CLUSTER \
+  --service raft-coordinator-dev-worker --force-new-deployment
+aws ecs update-service --cluster $CLUSTER \
+  --service raft-coordinator-dev-ingest --force-new-deployment
+aws ecs update-service --cluster $CLUSTER \
+  --service raft-coordinator-dev-observer --force-new-deployment
 ```
 
-## Step 6: Verify the system is running
-
-Check ECS service status:
+## Step 5: Verify the system is running
 
 ```bash
 aws ecs list-services --cluster $CLUSTER
@@ -116,72 +115,96 @@ aws ecs describe-services --cluster $CLUSTER --services \
   raft-coordinator-dev-ingest \
   raft-coordinator-dev-observer \
   --query 'services[].{name:serviceName,running:runningCount,desired:desiredCount,status:status}'
-```
 
-Check coordinator logs:
-
-```bash
 aws logs tail /ecs/raft-coordinator-dev/coordinator --follow
-```
-
-Check worker logs:
-
-```bash
 aws logs tail /ecs/raft-coordinator-dev/worker --follow
 ```
 
-## Step 7: Submit a test task
-
-The ingest API runs on a private subnet (no public IP). To test, either:
-
-**Option A: From a bastion / Cloud9 in the same VPC:**
+Confirm peer registration (the DynamoDB-based replacement for Cloud Map):
 
 ```bash
-curl -X POST http://<ingest-task-private-ip>:8080/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{"payload":"aGVsbG8gd29ybGQ=","priority":5}'
+aws dynamodb scan --table-name raft-coordinator-dev-peers \
+  --query 'Items[].{id:node_id.S,grpc:grpc_addr.S,leader:is_leader.BOOL}'
 ```
 
-**Option B: Add an ALB (recommended for demos):**
+Each coordinator writes its own row on startup and heartbeats every 10s with
+the current `is_leader` bit. Downstream services read this table to discover
+the leader.
 
-Add a public ALB in front of the ingest service in Terraform (uses the public subnets already provisioned). This is not included by default to avoid extra cost.
+## Step 6: Submit a test task
 
-**Option C: Use ECS Exec to run curl inside a container:**
+The ingest API is on a private subnet. See `LIFECYCLE.md` for the manual
+DDB + S3 + SQS recipe that bypasses it entirely, or use one of:
+
+**Option A — ECS Exec into a container:**
 
 ```bash
-TASK_ARN=$(aws ecs list-tasks --cluster $CLUSTER --service-name raft-coordinator-dev-ingest --query 'taskArns[0]' --output text)
-aws ecs execute-command --cluster $CLUSTER --task $TASK_ARN --container ingest --interactive --command "/bin/sh"
-# Inside the container:
-# wget -qO- --post-data='{"payload":"aGVsbG8=","priority":3}' --header='Content-Type: application/json' http://localhost:8080/tasks
+TASK_ARN=$(aws ecs list-tasks --cluster $CLUSTER \
+  --service-name raft-coordinator-dev-ingest --query 'taskArns[0]' --output text)
+aws ecs execute-command --cluster $CLUSTER --task $TASK_ARN \
+  --container ingest --interactive --command "/bin/sh"
+# inside the container:
+wget -qO- --post-data='{"payload":"aGVsbG8=","priority":3}' \
+  --header='Content-Type: application/json' http://localhost:8080/tasks
 ```
 
-After submitting, watch the task flow through the system:
+**Option B — chaos-bench client (recommended for experiments):**
+
+The `chaos-bench/` tool submits directly to DynamoDB + S3 + SQS, which works
+from any machine with AWS credentials — no VPC access needed.
 
 ```bash
-# Check DynamoDB for the task
-aws dynamodb scan --table-name raft-coordinator-dev-tasks --max-items 5
-
-# Check SQS for pending messages
-aws sqs get-queue-attributes \
-  --queue-url $(terraform output -raw ingest_queue_url) \
-  --attribute-names ApproximateNumberOfMessages
+cd chaos-bench
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python main.py bench --rate 60 --duration 30
 ```
 
-## Scaling to 3 coordinators (production-like)
+See `chaos-bench/README.md` for the full command set and how each subcommand
+maps to the four proposal experiments.
 
-In `terraform/environments/dev/main.tf`, change:
+## Scaling to 3 coordinators (for experiments)
+
+After images are pushed:
+
+```bash
+cd terraform/environments/dev
+terraform apply -var='coordinator_count=3'
+```
+
+Or persist it by copying `terraform.tfvars.example` to `terraform.tfvars` and
+setting `coordinator_count = 3`. Raft elects a leader automatically once all
+three registrations appear in the peers table.
+
+## Non-sandbox accounts
+
+For any account that is **not** an AWS Academy Learner Lab, the `LabRole`
+does not exist. Override the task role:
+
+```bash
+# copy the example
+cp terraform.tfvars.example terraform.tfvars
+```
+
+Edit `terraform.tfvars`:
 
 ```hcl
-coordinator_count = 3
+lab_role_arn = "arn:aws:iam::123456789012:role/ecsTaskExecutionRole"
 ```
 
-Then `terraform apply`. This creates three coordinator task definitions (coordinator-a, -b, -c), each aware of the other two via `PEER_ADDRS`. Raft will elect a leader automatically.
+The role must have:
+- `AmazonECSTaskExecutionRolePolicy` (pull from ECR, write to CloudWatch Logs)
+- Read/write on the tasks/peers/raft-state DynamoDB tables
+- Read/write on the task-data + raft-snapshots S3 buckets
+- Send/Receive on all three SQS queues
 
 ## Monitoring
 
-- **CloudWatch Logs**: Each service has its own log group under `/ecs/raft-coordinator-dev/`
-- **State Observer**: Publishes metrics to CloudWatch namespace `Driftless/Raft` and exposes Prometheus metrics on port 9090
-- **Coordinator /state endpoint**: Returns JSON with term, role, commit index — polled by the observer
+- **CloudWatch Logs**: One group per service under `/ecs/raft-coordinator-dev/`
+- **State Observer**: Publishes to CloudWatch namespace `Driftless/Raft`,
+  reads coordinator addresses from the peers DynamoDB table every tick
+- **Coordinator `/state`**: JSON with term, role, commit index, log length —
+  polled by the observer; also callable directly from inside the VPC
 
 ## Teardown
 
@@ -190,21 +213,24 @@ cd terraform/environments/dev
 terraform destroy
 ```
 
-This removes all AWS resources. ECR repos have `force_delete = true` so images are cleaned up automatically.
+ECR repositories have `force_delete = true`, so pushed images are removed.
 
 ## Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| ECS task keeps restarting | Health check failing | Check logs: `aws logs tail /ecs/raft-coordinator-dev/coordinator --since 5m` |
-| Tasks stuck in PENDING | Coordinator not polling SQS | Verify `SQS_INGEST_URL` env var in coordinator logs |
-| Worker not processing | Assignment queue empty | Check coordinator is leader and dispatching: look for "proposed" in logs |
-| Coordinator can't reach peers | Cloud Map DNS not ready | Wait 30-60s after deploy; check `nslookup coordinator-a.raft.local` from inside VPC |
-| `AccessDeniedException` | LabRole missing permissions | Verify `lab_role_arn` is set to `arn:aws:iam::<account>:role/LabRole` |
-| Image pull fails | ECR login expired | Re-run `aws ecr get-login-password` (tokens expire after 12h) |
+| ECS task keeps restarting | Image missing, or health check failing | `aws logs tail /ecs/raft-coordinator-dev/coordinator --since 5m` |
+| Tasks stuck in PENDING | Coordinator not polling SQS | Check `SQS_INGEST_URL` in coordinator logs; confirm leader |
+| Worker not processing | Assignment queue empty | Look for `proposed` + `committed` entries in leader's log |
+| Coordinator waits forever for peers | Peer DDB row missing or stale | Scan `raft-coordinator-dev-peers`; a fresh `heartbeat_ts` within 30s means healthy |
+| `AccessDeniedException` | `lab_role_arn` wrong or role missing perms | See *Non-sandbox accounts* above |
+| Image pull fails | ECR login expired | Re-run `aws ecr get-login-password` (tokens last 12h) |
+| `voc-cancel-cred` explicit deny | voclabs session expired | Restart the Learner Lab and re-export creds |
 
 ## AWS Academy notes
 
-- Your Learner Lab session expires after ~4 hours. Running resources are stopped but not deleted — re-start the lab and resources resume.
-- You cannot create IAM roles. All services use the pre-existing `LabRole`.
-- NAT gateway costs ~$0.045/hr. The dev config uses one NAT gateway to minimize cost.
+- The Learner Lab session expires after ~4 hours. Resources are stopped but
+  not deleted; restart the lab and re-export creds.
+- You cannot create IAM roles. Every service uses the pre-existing `LabRole`,
+  which is what the Terraform default resolves to.
+- One NAT gateway (~$0.045/hr) — dev uses a single AZ to minimize cost.
