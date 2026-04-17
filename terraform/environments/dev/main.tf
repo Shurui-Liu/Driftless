@@ -19,6 +19,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 # ── Networking ────────────────────────────────────────────────────────────────
 # Dev: single AZ to keep NAT gateway costs low.
 
@@ -33,15 +35,13 @@ module "networking" {
 }
 
 # ── Storage ───────────────────────────────────────────────────────────────────
-# Replace YOUR_ACCOUNT_ID with your real AWS account ID before applying.
-# Find it with: aws sts get-caller-identity --query Account --output text
 
 module "storage" {
   source      = "../../modules/storage"
   environment = "dev"
   project     = "raft-coordinator"
 
-  lab_role_arn                = "arn:aws:iam::YOUR_ACCOUNT_ID:role/labRole"
+  lab_role_arn                = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
   task_payload_retention_days = 7
   raft_log_retention_days     = 30
 }
@@ -70,6 +70,7 @@ module "ecs_cluster" {
   lab_role_arn          = module.storage.lab_role_arn
   tasks_table_name      = module.storage.tasks_table_name
   raft_state_table_name = module.storage.raft_state_table_name
+  peers_table_name      = module.storage.peers_table_name
   task_data_bucket      = module.storage.task_data_bucket
   raft_snapshots_bucket = module.storage.raft_snapshots_bucket
 
@@ -79,7 +80,6 @@ module "ecs_cluster" {
   worker_security_group_id      = module.networking.worker_security_group_id
   ingest_security_group_id      = module.networking.ingest_security_group_id
   observer_security_group_id    = module.networking.observer_security_group_id
-  service_discovery_service_arn = module.networking.service_discovery_service_arn
 
   # From messaging module
   ingest_queue_url     = module.messaging.ingest_queue_url

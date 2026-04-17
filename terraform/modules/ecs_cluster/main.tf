@@ -11,15 +11,13 @@ locals {
   # { "coordinator-a" = 0, "coordinator-b" = 1, "coordinator-c" = 2 }
   node_ids = {
     for i in range(var.coordinator_count) :
-    "coordinator-${chr(97 + i)}" => i
+    "coordinator-${substr("abcdefghijklmnopqrstuvwxyz", i, 1)}" => i
   }
 
-  # Build PEER_ADDRS for each node — all peers except itself.
-  # e.g. for coordinator-a: "coordinator-b.raft.local:50051,coordinator-c.raft.local:50051"
-  all_peer_addrs = [
-    for i in range(var.coordinator_count) :
-    "coordinator-${chr(97 + i)}.raft.local:${var.grpc_port}"
-  ]
+  # Full list of coordinator node IDs. Workers and observer use this to know
+  # which rows to look up in the peers table. Coordinator itself filters its
+  # own ID out at runtime to derive EXPECTED_PEER_IDS.
+  all_node_ids = [for k, _ in local.node_ids : k]
 }
 
 # ── ECS Cluster ───────────────────────────────────────────────────────────────
@@ -87,13 +85,11 @@ resource "aws_ecs_task_definition" "coordinator" {
     environment = [
       { name = "NODE_ID",   value = each.key },
       { name = "GRPC_PORT", value = tostring(var.grpc_port) },
-      { name = "HTTP_PORT",  value = tostring(var.http_port) },
+      { name = "HTTP_PORT", value = tostring(var.http_port) },
+      { name = "PEERS_TABLE", value = var.peers_table_name },
       {
-        name  = "PEER_ADDRS"
-        value = join(",", [
-          for addr in local.all_peer_addrs :
-          addr if addr != "${each.key}.raft.local:${var.grpc_port}"
-        ])
+        name  = "EXPECTED_PEER_IDS"
+        value = join(",", [for id in local.all_node_ids : id if id != each.key])
       },
       { name = "SQS_INGEST_URL",        value = var.ingest_queue_url },
       { name = "SQS_ASSIGNMENT_URL",    value = var.assignment_queue_url },
@@ -148,10 +144,8 @@ resource "aws_ecs_service" "coordinator" {
     assign_public_ip = false
   }
 
-  # Cloud Map registration — gives this task its DNS name.
-  service_registries {
-    registry_arn = var.service_discovery_service_arn
-  }
+  # Peer discovery is via DynamoDB peers table (see coordinator bootstrap);
+  # no Cloud Map registration needed here.
 
   lifecycle {
     # Don't redeploy during chaos experiments when task definitions update.
@@ -194,10 +188,12 @@ resource "aws_ecs_task_definition" "worker" {
     }]
 
     environment = [
-      { name = "DYNAMO_TABLE",       value = var.tasks_table_name },
-      { name = "S3_BUCKET",          value = var.task_data_bucket },
-      { name = "SQS_ASSIGNMENT_URL", value = var.assignment_queue_url },
-      { name = "COORDINATOR_URL",    value = "http://coordinator-a.raft.local:${var.http_port}" },
+      { name = "DYNAMO_TABLE",        value = var.tasks_table_name },
+      { name = "S3_BUCKET",           value = var.task_data_bucket },
+      { name = "SQS_ASSIGNMENT_URL",  value = var.assignment_queue_url },
+      { name = "PEERS_TABLE",         value = var.peers_table_name },
+      { name = "COORDINATOR_NODE_IDS", value = join(",", local.all_node_ids) },
+      { name = "COORDINATOR_HTTP_PORT", value = tostring(var.http_port) },
     ]
 
     logConfiguration = {
@@ -339,13 +335,9 @@ resource "aws_ecs_task_definition" "observer" {
     }]
 
     environment = [
-      {
-        name  = "COORDINATOR_ADDRS"
-        value = join(",", [
-          for i in range(var.coordinator_count) :
-          "coordinator-${chr(97 + i)}.raft.local:${var.http_port}"
-        ])
-      },
+      { name = "PEERS_TABLE",          value = var.peers_table_name },
+      { name = "COORDINATOR_NODE_IDS", value = join(",", local.all_node_ids) },
+      { name = "COORDINATOR_HTTP_PORT", value = tostring(var.http_port) },
       { name = "AWS_REGION",     value = data.aws_region.current.name },
       { name = "CW_NAMESPACE",   value = "Driftless/Raft" },
       { name = "SNS_TOPIC_ARN",  value = var.sns_topic_arn },

@@ -259,6 +259,12 @@ func (n *Node) runCandidate(ctx context.Context) {
 	wonElection := make(chan struct{}, 1)
 	steppedDown := make(chan struct{}, 1)
 
+	// Single-node cluster: the self-vote already satisfies majority, and
+	// no RequestVote goroutines will run to signal the win. Short-circuit.
+	if votes >= majority {
+		wonElection <- struct{}{}
+	}
+
 	for _, p := range n.peer {
 		p := p
 		wg.Add(1)
@@ -796,6 +802,12 @@ func (n *Node) Propose(cmd []byte) (<-chan ProposeResult, bool) {
 
 	result := make(chan ProposeResult, 1)
 	n.commitWaits[entry.Index] = result
+
+	// Single-node cluster: the leader's own match already satisfies majority,
+	// but maybeAdvanceCommitLocked is otherwise only called from
+	// handleAppendEntriesReply. Run it here so the commit index advances
+	// without peers to reply.
+	n.maybeAdvanceCommitLocked()
 
 	// Kick every replicator — a fresh entry is waiting.
 	for _, ch := range n.replicateSig {

@@ -26,8 +26,8 @@ variable "coordinator_security_group_id" {
   type        = string
 }
 
-variable "service_discovery_service_arn" {
-  description = "Cloud Map service ARN for coordinator DNS registration"
+variable "peers_table_name" {
+  description = "DynamoDB peers table name - used for coordinator peer discovery in place of Cloud Map"
   type        = string
 }
 

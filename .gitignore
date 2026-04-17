@@ -8,5 +8,17 @@
 # macOS
 .DS_Store
 
-# Go
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Go build artifacts
 /bin/
+worker-node/worker-node
+raft/coordinator
+task-ingest-api/task-ingest-api
+
+# Local env / secrets
+.env
+*.pem

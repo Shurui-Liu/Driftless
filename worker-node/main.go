@@ -10,6 +10,8 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -26,7 +28,9 @@ var (
 	tableName       = os.Getenv("DYNAMO_TABLE")       // e.g. "tasks"
 	bucketName      = os.Getenv("S3_BUCKET")          // e.g. "driftless-payloads"
 	assignmentQueue = os.Getenv("SQS_ASSIGNMENT_URL") // assignment queue URL
-	coordinatorURL  = os.Getenv("COORDINATOR_URL")    // e.g. "http://coordinator-a.raft.local:8080"
+	peersTable      = os.Getenv("PEERS_TABLE")        // coordinator peer registry (DDB)
+	coordinatorIDs  = splitCSV(os.Getenv("COORDINATOR_NODE_IDS"))
+	legacyCoordURL  = os.Getenv("COORDINATOR_URL") // static override for local dev
 	workerID        = getWorkerID()
 )
 
@@ -36,6 +40,50 @@ type Worker struct {
 	db  *dynamodb.Client
 	s3  *s3.Client
 	sqs *sqs.Client
+
+	coordMu  sync.RWMutex
+	coordURL string // current coordinator HTTP URL, refreshed on heartbeat failure
+}
+
+// getCoordinator returns the currently-cached coordinator URL.
+func (w *Worker) getCoordinator() string {
+	w.coordMu.RLock()
+	defer w.coordMu.RUnlock()
+	return w.coordURL
+}
+
+func (w *Worker) setCoordinator(url string) {
+	w.coordMu.Lock()
+	w.coordURL = url
+	w.coordMu.Unlock()
+}
+
+// refreshCoordinator scans the peers table for any live coordinator and
+// caches its HTTP URL. Returns error if none of COORDINATOR_NODE_IDS resolve.
+// No-op when running with a static COORDINATOR_URL override.
+func (w *Worker) refreshCoordinator(ctx context.Context) error {
+	if peersTable == "" {
+		return nil
+	}
+	for _, id := range coordinatorIDs {
+		out, err := w.db.GetItem(ctx, &dynamodb.GetItemInput{
+			TableName: aws.String(peersTable),
+			Key: map[string]types.AttributeValue{
+				"node_id": &types.AttributeValueMemberS{Value: id},
+			},
+			ConsistentRead: aws.Bool(true),
+		})
+		if err != nil || len(out.Item) == 0 {
+			continue
+		}
+		v, ok := out.Item["http_addr"].(*types.AttributeValueMemberS)
+		if !ok {
+			continue
+		}
+		w.setCoordinator("http://" + v.Value)
+		return nil
+	}
+	return fmt.Errorf("no coordinator found in peers table %q", peersTable)
 }
 
 // ---- Message types ---------------------------------------------------------
@@ -252,13 +300,21 @@ func (w *Worker) sendHeartbeats(ctx context.Context, currentTaskID *string) {
 				hb.TaskID = *currentTaskID
 			}
 			body, _ := json.Marshal(hb)
+			url := w.getCoordinator()
+			if url == "" {
+				continue
+			}
 			resp, err := http.Post(
-				coordinatorURL+"/heartbeat",
+				url+"/heartbeat",
 				"application/json",
 				bytes.NewReader(body),
 			)
 			if err != nil {
 				log.Printf("heartbeat failed: %v", err)
+				// Coordinator may have failed over — re-resolve from peers table.
+				if rerr := w.refreshCoordinator(ctx); rerr != nil {
+					log.Printf("refresh coordinator: %v", rerr)
+				}
 				continue
 			}
 			resp.Body.Close()
@@ -266,6 +322,19 @@ func (w *Worker) sendHeartbeats(ctx context.Context, currentTaskID *string) {
 			return
 		}
 	}
+}
+
+func splitCSV(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	for _, s := range strings.Split(raw, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func getWorkerID() string {
@@ -293,6 +362,29 @@ func main() {
 		db:  dynamodb.NewFromConfig(cfg),
 		s3:  s3.NewFromConfig(cfg),
 		sqs: sqs.NewFromConfig(cfg),
+	}
+
+	// Resolve coordinator URL. Prefer static override (local dev), else
+	// block until a coordinator appears in the peers table.
+	if legacyCoordURL != "" {
+		w.setCoordinator(legacyCoordURL)
+	} else if peersTable != "" && len(coordinatorIDs) > 0 {
+		bootCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		for {
+			if err := w.refreshCoordinator(bootCtx); err == nil && w.getCoordinator() != "" {
+				break
+			}
+			select {
+			case <-bootCtx.Done():
+				cancel()
+				log.Fatalf("no coordinator found within timeout; set COORDINATOR_URL for local dev")
+			case <-time.After(2 * time.Second):
+			}
+		}
+		cancel()
+		log.Printf("resolved coordinator: %s", w.getCoordinator())
+	} else {
+		log.Printf("warning: no COORDINATOR_URL and no PEERS_TABLE; heartbeats disabled")
 	}
 
 	// Start heartbeat sender in background (idle worker, no current task)

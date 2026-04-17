@@ -71,6 +71,31 @@ resource "aws_dynamodb_table" "raft_state" {
   tags = merge(local.common_tags, { Name = "${local.prefix}-raft-state" })
 }
 
+# ── DynamoDB — Peer Registry ──────────────────────────────────────────────────
+# Replaces Cloud Map in sandbox environments that deny servicediscovery:*.
+# Each coordinator writes {node_id, grpc_addr, http_addr, heartbeat_ts}
+# on startup and refreshes heartbeat_ts periodically. Peers and downstream
+# services (worker, observer) read from this table to resolve coordinator IPs.
+
+resource "aws_dynamodb_table" "peers" {
+  name         = "${local.prefix}-peers"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "node_id"
+
+  attribute {
+    name = "node_id"
+    type = "S"
+  }
+
+  # Stale entries auto-expire if a coordinator dies without deregistering.
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-peers" })
+}
+
 # ── S3 — Task Payloads & Results ──────────────────────────────────────────────
 # Large task payloads and results live here.
 # DynamoDB stores only the S3 key reference, keeping items small.

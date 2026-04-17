@@ -115,7 +115,7 @@ resource "aws_route_table_association" "private" {
 # and outbound to AWS APIs (SQS, DynamoDB, S3).
 resource "aws_security_group" "coordinator" {
   name        = "${local.prefix}-coordinator-sg"
-  description = "Raft coordinator nodes — gRPC peer traffic"
+  description = "Raft coordinator nodes - gRPC peer traffic"
   vpc_id      = aws_vpc.main.id
 
   # Allow coordinators to call each other over gRPC.
@@ -151,7 +151,7 @@ resource "aws_security_group" "coordinator" {
 # Worker security group — health-check port + outbound for SQS/DynamoDB/S3/heartbeat.
 resource "aws_security_group" "worker" {
   name        = "${local.prefix}-worker-sg"
-  description = "Worker nodes — outbound only (polls SQS, heartbeats to coordinator)"
+  description = "Worker nodes - outbound only (polls SQS, heartbeats to coordinator)"
   vpc_id      = aws_vpc.main.id
 
   egress {
@@ -167,7 +167,7 @@ resource "aws_security_group" "worker" {
 # Ingest API security group — accepts HTTP traffic on 8080.
 resource "aws_security_group" "ingest" {
   name        = "${local.prefix}-ingest-sg"
-  description = "Task Ingest API — HTTP inbound"
+  description = "Task Ingest API - HTTP inbound"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -191,7 +191,7 @@ resource "aws_security_group" "ingest" {
 # Observer security group — Prometheus metrics on 9090, outbound to coordinators.
 resource "aws_security_group" "observer" {
   name        = "${local.prefix}-observer-sg"
-  description = "State Observer — Prometheus + outbound to coordinators"
+  description = "State Observer - Prometheus + outbound to coordinators"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -212,35 +212,6 @@ resource "aws_security_group" "observer" {
   tags = merge(local.common_tags, { Name = "${local.prefix}-observer-sg" })
 }
 
-# ── Cloud Map (Service Discovery) ─────────────────────────────────────────────
-# Cloud Map gives each coordinator ECS task a stable DNS name so peers can
-# find each other without hardcoding IPs.
-# e.g. "coordinator-a.raft.local:50051" resolves to the task's private IP.
-
-resource "aws_service_discovery_private_dns_namespace" "raft" {
-  name        = "raft.local"
-  description = "Private DNS namespace for Raft coordinator service discovery"
-  vpc         = aws_vpc.main.id
-  tags        = local.common_tags
-}
-
-resource "aws_service_discovery_service" "coordinator" {
-  name = "coordinator"
-
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.raft.id
-
-    dns_records {
-      ttl  = 10 # low TTL so new tasks are discovered quickly after restarts
-      type = "A"
-    }
-
-    routing_policy = "MULTIVALUE" # returns all healthy task IPs, not just one
-  }
-
-  health_check_custom_config {
-    failure_threshold = 1
-  }
-
-  tags = local.common_tags
-}
+# Peer discovery is handled via a DynamoDB peers table in the storage module,
+# since the voclabs sandbox denies servicediscovery:* actions. See
+# raft/cmd/coordinator/main.go for the register/poll flow.
