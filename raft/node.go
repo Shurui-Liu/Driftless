@@ -2,6 +2,7 @@ package raft
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"math/rand"
 	"sync"
@@ -18,15 +19,20 @@ const (
 )
 
 // ElectionTimeout is randomized per node to avoid split votes.
-// Raft paper recommends 150–300ms; tune based on your network RTT.
 const (
 	electionTimeoutMin = 150 * time.Millisecond
 	electionTimeoutMax = 300 * time.Millisecond
 	heartbeatInterval  = 50 * time.Millisecond
 )
 
+// ErrNotLeader is returned by AppendCommand when this node is not the leader.
+var ErrNotLeader = errors.New("not leader")
+
+// ApplyFunc is called for each log entry once committed by a quorum.
+// Runs in its own goroutine; must be safe to call concurrently.
+type ApplyFunc func(LogEntry)
+
 // LogEntry is one entry in the replicated Raft log.
-// For your task queue, the Command will encode task state transitions.
 type LogEntry struct {
 	Term    int
 	Index   int
@@ -35,36 +41,37 @@ type LogEntry struct {
 
 // RequestVoteArgs is the RPC payload sent by a Candidate.
 type RequestVoteArgs struct {
-	Term         int    // candidate's current term
-	CandidateID  string // so peers can record who they voted for
-	LastLogIndex int    // index of candidate's last log entry
-	LastLogTerm  int    // term of candidate's last log entry
+	Term         int
+	CandidateID  string
+	LastLogIndex int
+	LastLogTerm  int
 }
 
 // RequestVoteReply is the response from a peer.
 type RequestVoteReply struct {
-	Term        int  // peer's current term (so candidate can update if stale)
+	Term        int
 	VoteGranted bool
 }
 
 // AppendEntriesArgs is used for both heartbeats (Entries=nil) and log replication.
 type AppendEntriesArgs struct {
-	Term         int        // leader's term
-	LeaderID     string     // so followers can redirect clients
-	PrevLogIndex int        // index of log entry immediately before new ones
-	PrevLogTerm  int        // term of PrevLogIndex entry
-	Entries      []LogEntry // empty for heartbeat
-	LeaderCommit int        // leader's commitIndex
+	Term         int
+	LeaderID     string
+	PrevLogIndex int
+	PrevLogTerm  int
+	Entries      []LogEntry
+	LeaderCommit int
 }
 
 // AppendEntriesReply tells the leader whether the follower accepted.
 type AppendEntriesReply struct {
-	Term    int  // follower's term (so leader can step down if stale)
+	Term    int
 	Success bool
 }
 
 // Peer is a remote Raft node the coordinator talks to via gRPC.
 type Peer interface {
+	ID() string
 	RequestVote(ctx context.Context, args RequestVoteArgs) (RequestVoteReply, error)
 	AppendEntries(ctx context.Context, args AppendEntriesArgs) (AppendEntriesReply, error)
 }
@@ -76,9 +83,9 @@ type Node struct {
 	log  *slog.Logger
 	peer []Peer
 
-	// Persistent state (must survive crashes — you'll persist these to S3)
+	// Persistent state (must survive crashes)
 	currentTerm int
-	votedFor    string // "" means no vote cast this term
+	votedFor    string
 	logEntries  []LogEntry
 
 	// Volatile state
@@ -87,12 +94,15 @@ type Node struct {
 	lastApplied int
 
 	// Leader-only volatile state (reinitialized after election)
-	nextIndex  map[string]int // peer ID → next log index to send
-	matchIndex map[string]int // peer ID → highest log index known replicated
+	nextIndex  map[string]int
+	matchIndex map[string]int
 
 	// Channels / timers driving the election loop
 	resetElectionTimer chan struct{}
-	stepDownCh         chan struct{} // signals Leader → Follower transition
+	stepDownCh         chan struct{}
+
+	// Apply callback — invoked in a goroutine for each newly committed entry.
+	applyFn ApplyFunc
 }
 
 // NewNode creates a Raft node. Call Run() in a goroutine to start it.
@@ -108,6 +118,36 @@ func NewNode(id string, peers []Peer, logger *slog.Logger) *Node {
 	// Log starts with a dummy entry at index 0 so real entries begin at 1.
 	n.logEntries = []LogEntry{{Term: 0, Index: 0}}
 	return n
+}
+
+// SetApplyFunc registers the callback invoked for each committed log entry.
+// Must be called before Run().
+func (n *Node) SetApplyFunc(fn ApplyFunc) {
+	n.applyFn = fn
+}
+
+// IsLeader returns true if this node is currently the Raft leader.
+func (n *Node) IsLeader() bool {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.state == Leader
+}
+
+// AppendCommand appends a new command to the leader's log and returns its index.
+// Returns ErrNotLeader if this node is not the current leader.
+func (n *Node) AppendCommand(cmd []byte) (int, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.state != Leader {
+		return 0, ErrNotLeader
+	}
+	idx := len(n.logEntries)
+	n.logEntries = append(n.logEntries, LogEntry{
+		Term:    n.currentTerm,
+		Index:   idx,
+		Command: cmd,
+	})
+	return idx, nil
 }
 
 // Run starts the Raft election loop. Call this in a goroutine.
@@ -145,7 +185,6 @@ func (n *Node) runFollower(ctx context.Context) {
 			return
 
 		case <-n.resetElectionTimer:
-			// Received a valid heartbeat or granted a vote — reset the clock.
 			if !timer.Stop() {
 				select {
 				case <-timer.C:
@@ -155,7 +194,6 @@ func (n *Node) runFollower(ctx context.Context) {
 			timer.Reset(randomElectionTimeout())
 
 		case <-timer.C:
-			// No heartbeat received in time — trigger an election.
 			n.mu.Lock()
 			n.state = Candidate
 			n.mu.Unlock()
@@ -169,7 +207,7 @@ func (n *Node) runFollower(ctx context.Context) {
 func (n *Node) runCandidate(ctx context.Context) {
 	n.mu.Lock()
 	n.currentTerm++
-	n.votedFor = n.id // vote for self
+	n.votedFor = n.id
 	term := n.currentTerm
 	lastIdx, lastTerm := n.lastLogIndexAndTerm()
 	n.mu.Unlock()
@@ -186,7 +224,6 @@ func (n *Node) runCandidate(ctx context.Context) {
 		LastLogTerm:  lastTerm,
 	}
 
-	// Send RequestVote RPCs in parallel.
 	var voteMu sync.Mutex
 	var wg sync.WaitGroup
 	wonElection := make(chan struct{}, 1)
@@ -205,7 +242,6 @@ func (n *Node) runCandidate(ctx context.Context) {
 			n.mu.Lock()
 			defer n.mu.Unlock()
 
-			// If we see a higher term, immediately revert to Follower.
 			if reply.Term > n.currentTerm {
 				n.currentTerm = reply.Term
 				n.votedFor = ""
@@ -232,7 +268,6 @@ func (n *Node) runCandidate(ctx context.Context) {
 		}()
 	}
 
-	// Wait for election outcome or timeout.
 	timer := time.NewTimer(randomElectionTimeout())
 	defer timer.Stop()
 
@@ -245,9 +280,7 @@ func (n *Node) runCandidate(ctx context.Context) {
 		n.initLeaderState()
 		n.mu.Unlock()
 	case <-steppedDown:
-		// Already set to Follower inside the goroutine above.
 	case <-timer.C:
-		// Split vote — stay Candidate and loop back to start a new election.
 		n.log.Info("election timed out, retrying", "term", term)
 	}
 
@@ -262,8 +295,8 @@ func (n *Node) runLeader(ctx context.Context) {
 	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
-	// Send an immediate heartbeat so followers reset their timers.
-	n.broadcastHeartbeat(ctx)
+	// Immediate first replication to assert leadership.
+	n.replicateLog(ctx)
 
 	for {
 		select {
@@ -275,37 +308,60 @@ func (n *Node) runLeader(ctx context.Context) {
 			n.mu.Unlock()
 			return
 		case <-ticker.C:
-			n.broadcastHeartbeat(ctx)
+			n.replicateLog(ctx)
 		}
 	}
 }
 
-func (n *Node) broadcastHeartbeat(ctx context.Context) {
+// replicateLog sends AppendEntries to all peers, carrying any un-replicated log entries.
+func (n *Node) replicateLog(ctx context.Context) {
 	n.mu.Lock()
+	if n.state != Leader {
+		n.mu.Unlock()
+		return
+	}
 	term := n.currentTerm
 	leaderID := n.id
-	prevIdx, prevTerm := n.lastLogIndexAndTerm()
-	commit := n.commitIndex
+	commitIdx := n.commitIndex
 	n.mu.Unlock()
-
-	args := AppendEntriesArgs{
-		Term:         term,
-		LeaderID:     leaderID,
-		PrevLogIndex: prevIdx,
-		PrevLogTerm:  prevTerm,
-		Entries:      nil, // heartbeat — no entries
-		LeaderCommit: commit,
-	}
 
 	for _, p := range n.peer {
 		p := p
 		go func() {
-			reply, err := p.AppendEntries(ctx, args)
+			n.mu.Lock()
+			if n.state != Leader || n.currentTerm != term {
+				n.mu.Unlock()
+				return
+			}
+			peerID := p.ID()
+			nextIdx := n.nextIndex[peerID]
+			prevLogIdx := nextIdx - 1
+			prevLogTerm := 0
+			if prevLogIdx > 0 && prevLogIdx < len(n.logEntries) {
+				prevLogTerm = n.logEntries[prevLogIdx].Term
+			}
+			var entries []LogEntry
+			if nextIdx < len(n.logEntries) {
+				entries = make([]LogEntry, len(n.logEntries)-nextIdx)
+				copy(entries, n.logEntries[nextIdx:])
+			}
+			n.mu.Unlock()
+
+			reply, err := p.AppendEntries(ctx, AppendEntriesArgs{
+				Term:         term,
+				LeaderID:     leaderID,
+				PrevLogIndex: prevLogIdx,
+				PrevLogTerm:  prevLogTerm,
+				Entries:      entries,
+				LeaderCommit: commitIdx,
+			})
 			if err != nil {
 				return
 			}
+
 			n.mu.Lock()
 			defer n.mu.Unlock()
+
 			if reply.Term > n.currentTerm {
 				n.currentTerm = reply.Term
 				n.votedFor = ""
@@ -314,8 +370,61 @@ func (n *Node) broadcastHeartbeat(ctx context.Context) {
 				case n.stepDownCh <- struct{}{}:
 				default:
 				}
+				return
+			}
+
+			if n.state != Leader || n.currentTerm != term {
+				return
+			}
+
+			if reply.Success {
+				newMatch := prevLogIdx + len(entries)
+				if newMatch > n.matchIndex[peerID] {
+					n.matchIndex[peerID] = newMatch
+				}
+				n.nextIndex[peerID] = newMatch + 1
+				n.tryAdvanceCommitIndex()
+			} else if n.nextIndex[peerID] > 1 {
+				// Consistency failure: back off and retry on next heartbeat.
+				n.nextIndex[peerID]--
 			}
 		}()
+	}
+}
+
+// tryAdvanceCommitIndex advances commitIndex to the highest index replicated by a quorum.
+// Must be called with n.mu held.
+func (n *Node) tryAdvanceCommitIndex() {
+	for idx := len(n.logEntries) - 1; idx > n.commitIndex; idx-- {
+		// Only commit entries from the current term (Raft §5.4.2).
+		if n.logEntries[idx].Term != n.currentTerm {
+			continue
+		}
+		count := 1 // leader self
+		for _, p := range n.peer {
+			if n.matchIndex[p.ID()] >= idx {
+				count++
+			}
+		}
+		majority := (len(n.peer)+1)/2 + 1
+		if count >= majority {
+			n.commitIndex = idx
+			n.maybeApply()
+			break
+		}
+	}
+}
+
+// maybeApply fires applyFn for each entry between lastApplied and commitIndex.
+// Must be called with n.mu held.
+func (n *Node) maybeApply() {
+	fn := n.applyFn
+	for n.lastApplied < n.commitIndex {
+		n.lastApplied++
+		entry := n.logEntries[n.lastApplied]
+		if fn != nil {
+			go fn(entry)
+		}
 	}
 }
 
@@ -328,20 +437,16 @@ func (n *Node) HandleRequestVote(args RequestVoteArgs) RequestVoteReply {
 
 	reply := RequestVoteReply{Term: n.currentTerm}
 
-	// Rule: if we see a higher term, update ours and reset voted-for.
 	if args.Term > n.currentTerm {
 		n.currentTerm = args.Term
 		n.votedFor = ""
 		n.state = Follower
 	}
 
-	// Deny if request is from a stale term.
 	if args.Term < n.currentTerm {
 		return reply
 	}
 
-	// Grant vote if we haven't voted yet (or already voted for this candidate)
-	// AND the candidate's log is at least as up-to-date as ours.
 	alreadyVoted := n.votedFor != "" && n.votedFor != args.CandidateID
 	if alreadyVoted {
 		return reply
@@ -357,7 +462,6 @@ func (n *Node) HandleRequestVote(args RequestVoteArgs) RequestVoteReply {
 	n.votedFor = args.CandidateID
 	reply.VoteGranted = true
 
-	// Reset our election timer — we just heard from a live candidate.
 	select {
 	case n.resetElectionTimer <- struct{}{}:
 	default:
@@ -365,7 +469,7 @@ func (n *Node) HandleRequestVote(args RequestVoteArgs) RequestVoteReply {
 	return reply
 }
 
-// HandleAppendEntries processes heartbeats (and later, log replication).
+// HandleAppendEntries processes heartbeats and log replication from a leader.
 func (n *Node) HandleAppendEntries(args AppendEntriesArgs) AppendEntriesReply {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -373,25 +477,58 @@ func (n *Node) HandleAppendEntries(args AppendEntriesArgs) AppendEntriesReply {
 	reply := AppendEntriesReply{Term: n.currentTerm}
 
 	if args.Term < n.currentTerm {
-		return reply // stale leader
+		return reply
 	}
 
-	// Valid leader heartbeat — step down if we're a Candidate or stale Leader.
 	if args.Term > n.currentTerm || n.state == Candidate {
 		n.currentTerm = args.Term
 		n.votedFor = ""
 		n.state = Follower
 	}
 
-	// Reset election timer — we have a live leader.
 	select {
 	case n.resetElectionTimer <- struct{}{}:
 	default:
 	}
 
+	// Log consistency check: prevLogIndex must exist with a matching term.
+	if args.PrevLogIndex > 0 {
+		if args.PrevLogIndex >= len(n.logEntries) {
+			return reply
+		}
+		if n.logEntries[args.PrevLogIndex].Term != args.PrevLogTerm {
+			return reply
+		}
+	}
+
+	// Append new entries, truncating any conflicting suffix.
+	for i, entry := range args.Entries {
+		idx := args.PrevLogIndex + 1 + i
+		if idx < len(n.logEntries) {
+			if n.logEntries[idx].Term != entry.Term {
+				n.logEntries = append(n.logEntries[:idx], args.Entries[i:]...)
+				break
+			}
+			// Entry already present with matching term — skip.
+		} else {
+			n.logEntries = append(n.logEntries, args.Entries[i:]...)
+			break
+		}
+	}
+
+	// Advance commitIndex per leader's leaderCommit.
+	if args.LeaderCommit > n.commitIndex {
+		lastNew := args.PrevLogIndex + len(args.Entries)
+		if args.LeaderCommit < lastNew {
+			n.commitIndex = args.LeaderCommit
+		} else {
+			n.commitIndex = lastNew
+		}
+		n.maybeApply()
+	}
+
 	reply.Success = true
 	return reply
-	// NOTE: Full log consistency check + entry appending goes here in Week 2.
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -405,11 +542,9 @@ func (n *Node) initLeaderState() {
 	lastIdx, _ := n.lastLogIndexAndTerm()
 	n.nextIndex = make(map[string]int)
 	n.matchIndex = make(map[string]int)
-	// TODO: replace with real peer IDs from peer list
-	for i := range n.peer {
-		id := peerID(i)
-		n.nextIndex[id] = lastIdx + 1
-		n.matchIndex[id] = 0
+	for _, p := range n.peer {
+		n.nextIndex[p.ID()] = lastIdx + 1
+		n.matchIndex[p.ID()] = 0
 	}
 }
 
@@ -418,14 +553,8 @@ func randomElectionTimeout() time.Duration {
 	return electionTimeoutMin + time.Duration(rand.Int63n(spread))
 }
 
-// peerID is a placeholder — replace with real peer IDs from your ECS service discovery.
-func peerID(i int) string {
-	return "peer-" + string(rune('A'+i))
-}
-
 // ── State observation ─────────────────────────────────────────────────────────
 
-// NodeState.String returns a human-readable role name for JSON serialization.
 func (s NodeState) String() string {
 	switch s {
 	case Follower:
@@ -440,7 +569,6 @@ func (s NodeState) String() string {
 }
 
 // NodeSnapshot is a point-in-time view of a node's Raft state.
-// Serialized as JSON by the HTTP /state endpoint consumed by the Python State Observer.
 type NodeSnapshot struct {
 	NodeID      string         `json:"node_id"`
 	State       string         `json:"state"`
@@ -449,12 +577,11 @@ type NodeSnapshot struct {
 	CommitIndex int            `json:"commit_index"`
 	LastApplied int            `json:"last_applied"`
 	LogLength   int            `json:"log_length"`
-	MatchIndex  map[string]int `json:"match_index,omitempty"` // leader only: peer → highest replicated index
-	NextIndex   map[string]int `json:"next_index,omitempty"`  // leader only: peer → next index to send
+	MatchIndex  map[string]int `json:"match_index,omitempty"` // leader only
+	NextIndex   map[string]int `json:"next_index,omitempty"`  // leader only
 }
 
 // Snapshot returns a consistent copy of the node's observable state.
-// Safe to call concurrently; acquires the node mutex internally.
 func (n *Node) Snapshot() NodeSnapshot {
 	n.mu.Lock()
 	defer n.mu.Unlock()
