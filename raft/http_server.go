@@ -16,14 +16,16 @@ import (
 	"time"
 )
 
-// HTTPServer serves the /state and /health endpoints for external monitoring.
+// HTTPServer serves the /state, /health, /heartbeat, and /workers endpoints.
 type HTTPServer struct {
-	node *Node
+	node    *Node
+	workers *WorkerTracker
 }
 
 // NewHTTPServer creates a monitoring server backed by the given Raft node.
-func NewHTTPServer(node *Node) *HTTPServer {
-	return &HTTPServer{node: node}
+// If tracker is non-nil, /heartbeat and /workers are exposed.
+func NewHTTPServer(node *Node, tracker *WorkerTracker) *HTTPServer {
+	return &HTTPServer{node: node, workers: tracker}
 }
 
 // Serve starts the HTTP server on addr (e.g. ":8080") and blocks until ctx
@@ -32,6 +34,11 @@ func (s *HTTPServer) Serve(ctx context.Context, addr string) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/state", s.handleState)
 	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/install-snapshot", s.handleInstallSnapshot)
+	if s.workers != nil {
+		mux.HandleFunc("/heartbeat", s.workers.handleHeartbeat)
+		mux.HandleFunc("/workers", s.workers.handleWorkers)
+	}
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -69,6 +76,29 @@ func (s *HTTPServer) handleState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(snap); err != nil {
 		s.node.log.Warn("http /state encode error", "err", err)
+	}
+}
+
+// handleInstallSnapshot receives a RaftSnapshot from the current leader and
+// hands it to the node for installation. Body is JSON-encoded InstallSnapshotArgs.
+func (s *HTTPServer) handleInstallSnapshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Cap the body to keep a rogue peer from OOM'ing us. 64 MiB is plenty for
+	// our state-machine sizes; bump if you change the SM to something larger.
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<20)
+
+	var args InstallSnapshotArgs
+	if err := json.NewDecoder(r.Body).Decode(&args); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	reply := s.node.HandleInstallSnapshot(args)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(reply); err != nil {
+		s.node.log.Warn("install-snapshot encode error", "err", err)
 	}
 }
 

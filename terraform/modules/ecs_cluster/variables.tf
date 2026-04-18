@@ -26,8 +26,8 @@ variable "coordinator_security_group_id" {
   type        = string
 }
 
-variable "service_discovery_service_arn" {
-  description = "Cloud Map service ARN for coordinator DNS registration"
+variable "peers_table_name" {
+  description = "DynamoDB peers table name - used for coordinator peer discovery in place of Cloud Map"
   type        = string
 }
 
@@ -95,6 +95,93 @@ variable "grpc_port" {
   description = "gRPC port the coordinator listens on"
   type        = number
   default     = 50051
+}
+
+variable "http_port" {
+  description = "HTTP port the coordinator state server listens on"
+  type        = number
+  default     = 8080
+}
+
+# ── Worker config ────────────────────────────────────────────────────────────
+
+variable "worker_image" {
+  description = "ECR image URI for the worker node"
+  type        = string
+  default     = ""
+}
+
+variable "worker_count" {
+  description = "Number of worker tasks"
+  type        = number
+  default     = 2
+}
+
+variable "worker_cpu" {
+  description = "CPU units for each worker task"
+  type        = number
+  default     = 256
+}
+
+variable "worker_memory" {
+  description = "Memory (MB) for each worker task"
+  type        = number
+  default     = 512
+}
+
+variable "worker_security_group_id" {
+  description = "Security group ID for worker tasks (from networking module)"
+  type        = string
+}
+
+# ── Ingest API config ───────────────────────────────────────────────────────
+
+variable "ingest_image" {
+  description = "ECR image URI for the task ingest API"
+  type        = string
+  default     = ""
+}
+
+variable "ingest_count" {
+  description = "Number of ingest API tasks"
+  type        = number
+  default     = 1
+}
+
+variable "ingest_cpu" {
+  description = "CPU units for each ingest API task"
+  type        = number
+  default     = 256
+}
+
+variable "ingest_memory" {
+  description = "Memory (MB) for each ingest API task"
+  type        = number
+  default     = 512
+}
+
+variable "ingest_security_group_id" {
+  description = "Security group ID for ingest API tasks (from networking module)"
+  type        = string
+}
+
+# ── Observer config ──────────────────────────────────────────────────────────
+
+variable "observer_image" {
+  description = "ECR image URI for the state observer"
+  type        = string
+  default     = ""
+}
+
+variable "observer_security_group_id" {
+  description = "Security group ID for observer tasks (from networking module)"
+  type        = string
+}
+
+variable "sns_topic_arn" {
+  description = "SNS topic ARN for observer alerts (optional)"
+  type        = string
+  default     = ""
 }
 
 variable "tags" {

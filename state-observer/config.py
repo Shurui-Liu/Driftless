@@ -25,6 +25,8 @@ from typing import List
 @dataclass
 class Config:
     coordinator_addrs: List[str]
+    peers_table: str = ""
+    coordinator_node_ids: List[str] = field(default_factory=list)
     poll_interval_s: float = 2.0
     cw_namespace: str = "Driftless/Raft"
     cw_publish_interval_s: float = 60.0
@@ -38,8 +40,12 @@ class Config:
     def from_env(cls) -> "Config":
         raw = os.environ.get("COORDINATOR_ADDRS", "localhost:8080")
         addrs = [a.strip() for a in raw.split(",") if a.strip()]
+        ids_raw = os.environ.get("COORDINATOR_NODE_IDS", "")
+        node_ids = [i.strip() for i in ids_raw.split(",") if i.strip()]
         return cls(
             coordinator_addrs=addrs,
+            peers_table=os.environ.get("PEERS_TABLE", ""),
+            coordinator_node_ids=node_ids,
             poll_interval_s=float(os.environ.get("POLL_INTERVAL_S", "2")),
             cw_namespace=os.environ.get("CW_NAMESPACE", "Driftless/Raft"),
             cw_publish_interval_s=float(os.environ.get("CW_PUBLISH_INTERVAL_S", "60")),

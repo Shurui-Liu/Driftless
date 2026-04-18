@@ -71,6 +71,31 @@ resource "aws_dynamodb_table" "raft_state" {
   tags = merge(local.common_tags, { Name = "${local.prefix}-raft-state" })
 }
 
+# ── DynamoDB — Peer Registry ──────────────────────────────────────────────────
+# Replaces Cloud Map in sandbox environments that deny servicediscovery:*.
+# Each coordinator writes {node_id, grpc_addr, http_addr, heartbeat_ts}
+# on startup and refreshes heartbeat_ts periodically. Peers and downstream
+# services (worker, observer) read from this table to resolve coordinator IPs.
+
+resource "aws_dynamodb_table" "peers" {
+  name         = "${local.prefix}-peers"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "node_id"
+
+  attribute {
+    name = "node_id"
+    type = "S"
+  }
+
+  # Stale entries auto-expire if a coordinator dies without deregistering.
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-peers" })
+}
+
 # ── S3 — Task Payloads & Results ──────────────────────────────────────────────
 # Large task payloads and results live here.
 # DynamoDB stores only the S3 key reference, keeping items small.
@@ -147,6 +172,57 @@ resource "aws_s3_bucket_public_access_block" "raft_snapshots" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+# ── ECR Repositories ─────────────────────────────────────────────────────────
+# One repo per container image. Student accounts (LabRole) can push/pull.
+
+resource "aws_ecr_repository" "coordinator" {
+  name                 = "${local.prefix}-coordinator"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-coordinator" })
+}
+
+resource "aws_ecr_repository" "worker" {
+  name                 = "${local.prefix}-worker"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-worker" })
+}
+
+resource "aws_ecr_repository" "ingest" {
+  name                 = "${local.prefix}-ingest"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-ingest" })
+}
+
+resource "aws_ecr_repository" "observer" {
+  name                 = "${local.prefix}-observer"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+
+  image_scanning_configuration {
+    scan_on_push = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-observer" })
 }
 
 # ── Data sources ──────────────────────────────────────────────────────────────

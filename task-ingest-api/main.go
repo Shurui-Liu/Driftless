@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"bytes"
@@ -180,9 +181,10 @@ func (s *Server) recoverOrphans(ctx context.Context) {
 
 	for _, item := range out.Items {
 		taskID := item["task_id"].(*types.AttributeValueMemberS).Value
-		priority := item["priority"].(*types.AttributeValueMemberN).Value
+		priorityStr := item["priority"].(*types.AttributeValueMemberN).Value
+		priority, _ := strconv.Atoi(priorityStr)
 
-		msg, _ := json.Marshal(map[string]string{
+		msg, _ := json.Marshal(map[string]any{
 			"task_id":  taskID,
 			"priority": priority,
 		})

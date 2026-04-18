@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and edit for your environment.
+# terraform.tfvars is gitignored — these values are per-deployment.
+
+# Number of coordinator ECS tasks. Use 1 for first apply, 3 for experiments.
+# coordinator_count = 3
+
+# IAM role used as execution + task role by every ECS service.
+# Leave unset (or empty string) to use the voclabs / AWS Academy LabRole.
+# For a non-sandbox account, supply your own role — e.g. the default
+# ECS execution role that has AmazonECSTaskExecutionRolePolicy attached.
+# lab_role_arn = "arn:aws:iam::123456789012:role/ecsTaskExecutionRole"

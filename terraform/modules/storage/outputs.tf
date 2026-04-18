@@ -19,6 +19,16 @@ output "raft_state_table_arn" {
   value       = aws_dynamodb_table.raft_state.arn
 }
 
+output "peers_table_name" {
+  description = "DynamoDB peers table name - set as PEERS_TABLE env var in ECS task definitions"
+  value       = aws_dynamodb_table.peers.name
+}
+
+output "peers_table_arn" {
+  description = "DynamoDB peers table ARN"
+  value       = aws_dynamodb_table.peers.arn
+}
+
 # S3
 output "task_data_bucket" {
   description = "S3 bucket name for task payloads and results — set as TASK_DATA_BUCKET env var"
@@ -38,6 +48,27 @@ output "raft_snapshots_bucket" {
 output "raft_snapshots_bucket_arn" {
   description = "S3 Raft snapshots bucket ARN"
   value       = aws_s3_bucket.raft_snapshots.arn
+}
+
+# ECR
+output "coordinator_ecr_url" {
+  description = "ECR repository URL for the coordinator image"
+  value       = aws_ecr_repository.coordinator.repository_url
+}
+
+output "worker_ecr_url" {
+  description = "ECR repository URL for the worker image"
+  value       = aws_ecr_repository.worker.repository_url
+}
+
+output "ingest_ecr_url" {
+  description = "ECR repository URL for the ingest API image"
+  value       = aws_ecr_repository.ingest.repository_url
+}
+
+output "observer_ecr_url" {
+  description = "ECR repository URL for the observer image"
+  value       = aws_ecr_repository.observer.repository_url
 }
 
 # labRole — passed straight through so ecs_cluster/ can reference it

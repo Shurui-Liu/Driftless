@@ -31,18 +31,12 @@ output "worker_security_group_id" {
   value       = aws_security_group.worker.id
 }
 
-# Cloud Map
-output "service_discovery_namespace_id" {
-  description = "Cloud Map namespace ID — pass to ecs_cluster module for service discovery"
-  value       = aws_service_discovery_private_dns_namespace.raft.id
+output "ingest_security_group_id" {
+  description = "Security group ID for ingest API ECS tasks"
+  value       = aws_security_group.ingest.id
 }
 
-output "service_discovery_service_arn" {
-  description = "Cloud Map service ARN for the coordinator — used in ECS service definition"
-  value       = aws_service_discovery_service.coordinator.arn
-}
-
-output "service_discovery_namespace_name" {
-  description = "DNS namespace name (e.g. raft.local)"
-  value       = aws_service_discovery_private_dns_namespace.raft.name
+output "observer_security_group_id" {
+  description = "Security group ID for observer ECS tasks"
+  value       = aws_security_group.observer.id
 }

@@ -22,3 +22,18 @@ output "log_group_name" {
   description = "CloudWatch log group name for coordinator containers"
   value       = aws_cloudwatch_log_group.coordinator.name
 }
+
+output "worker_service_name" {
+  description = "ECS service name for the worker pool"
+  value       = aws_ecs_service.worker.name
+}
+
+output "ingest_service_name" {
+  description = "ECS service name for the ingest API"
+  value       = aws_ecs_service.ingest.name
+}
+
+output "observer_service_name" {
+  description = "ECS service name for the state observer"
+  value       = aws_ecs_service.observer.name
+}

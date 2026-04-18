@@ -11,15 +11,13 @@ locals {
   # { "coordinator-a" = 0, "coordinator-b" = 1, "coordinator-c" = 2 }
   node_ids = {
     for i in range(var.coordinator_count) :
-    "coordinator-${chr(97 + i)}" => i
+    "coordinator-${substr("abcdefghijklmnopqrstuvwxyz", i, 1)}" => i
   }
 
-  # Build PEER_ADDRS for each node — all peers except itself.
-  # e.g. for coordinator-a: "coordinator-b.raft.local:50051,coordinator-c.raft.local:50051"
-  all_peer_addrs = [
-    for i in range(var.coordinator_count) :
-    "coordinator-${chr(97 + i)}.raft.local:${var.grpc_port}"
-  ]
+  # Full list of coordinator node IDs. Workers and observer use this to know
+  # which rows to look up in the peers table. Coordinator itself filters its
+  # own ID out at runtime to derive EXPECTED_PEER_IDS.
+  all_node_ids = [for k, _ in local.node_ids : k]
 }
 
 # ── ECS Cluster ───────────────────────────────────────────────────────────────
@@ -73,33 +71,30 @@ resource "aws_ecs_task_definition" "coordinator" {
     image     = var.coordinator_image
     essential = true
 
-    portMappings = [{
-      containerPort = var.grpc_port
-      protocol      = "tcp"
-    }]
+    portMappings = [
+      {
+        containerPort = var.grpc_port
+        protocol      = "tcp"
+      },
+      {
+        containerPort = var.http_port
+        protocol      = "tcp"
+      },
+    ]
 
     environment = [
-      # Identity — this is how the node knows who it is in the Raft cluster.
       { name = "NODE_ID",   value = each.key },
       { name = "GRPC_PORT", value = tostring(var.grpc_port) },
-
-      # PEER_ADDRS: all coordinators except this node itself.
+      { name = "HTTP_PORT", value = tostring(var.http_port) },
+      { name = "PEERS_TABLE", value = var.peers_table_name },
       {
-        name  = "PEER_ADDRS"
-        value = join(",", [
-          for addr in local.all_peer_addrs :
-          addr if addr != "${each.key}.raft.local:${var.grpc_port}"
-        ])
+        name  = "EXPECTED_PEER_IDS"
+        value = join(",", [for id in local.all_node_ids : id if id != each.key])
       },
-
-      # AWS resources — passed in from the other modules.
-      { name = "INGEST_QUEUE_URL",      value = var.ingest_queue_url },
-      { name = "ASSIGNMENT_QUEUE_URL",  value = var.assignment_queue_url },
-      { name = "RESULTS_QUEUE_URL",     value = var.results_queue_url },
-      { name = "TASKS_TABLE",           value = var.tasks_table_name },
-      { name = "RAFT_STATE_TABLE",      value = var.raft_state_table_name },
-      { name = "TASK_DATA_BUCKET",      value = var.task_data_bucket },
-      { name = "RAFT_SNAPSHOTS_BUCKET", value = var.raft_snapshots_bucket },
+      { name = "SQS_INGEST_URL",        value = var.ingest_queue_url },
+      { name = "SQS_ASSIGNMENT_URL",    value = var.assignment_queue_url },
+      { name = "DYNAMO_TABLE",           value = var.tasks_table_name },
+      { name = "SNAPSHOT_S3_BUCKET",     value = var.raft_snapshots_bucket },
     ]
 
     logConfiguration = {
@@ -149,10 +144,8 @@ resource "aws_ecs_service" "coordinator" {
     assign_public_ip = false
   }
 
-  # Cloud Map registration — gives this task its DNS name.
-  service_registries {
-    registry_arn = var.service_discovery_service_arn
-  }
+  # Peer discovery is via DynamoDB peers table (see coordinator bootstrap);
+  # no Cloud Map registration needed here.
 
   lifecycle {
     # Don't redeploy during chaos experiments when task definitions update.
@@ -163,6 +156,220 @@ resource "aws_ecs_service" "coordinator" {
     Name   = "${local.prefix}-${each.key}"
     NodeID = each.key
   })
+
+  depends_on = [aws_ecs_cluster.main]
+}
+
+# ── Worker ────────────────────────────────────────────────────────────────────
+
+resource "aws_cloudwatch_log_group" "worker" {
+  name              = "/ecs/${local.prefix}/worker"
+  retention_in_days = 7
+  tags              = local.common_tags
+}
+
+resource "aws_ecs_task_definition" "worker" {
+  family                   = "${local.prefix}-worker"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.worker_cpu
+  memory                   = var.worker_memory
+  task_role_arn            = var.lab_role_arn
+  execution_role_arn       = var.lab_role_arn
+
+  container_definitions = jsonencode([{
+    name      = "worker"
+    image     = var.worker_image
+    essential = true
+
+    portMappings = [{
+      containerPort = 8081
+      protocol      = "tcp"
+    }]
+
+    environment = [
+      { name = "DYNAMO_TABLE",        value = var.tasks_table_name },
+      { name = "S3_BUCKET",           value = var.task_data_bucket },
+      { name = "SQS_ASSIGNMENT_URL",  value = var.assignment_queue_url },
+      { name = "PEERS_TABLE",         value = var.peers_table_name },
+      { name = "COORDINATOR_NODE_IDS", value = join(",", local.all_node_ids) },
+      { name = "COORDINATOR_HTTP_PORT", value = tostring(var.http_port) },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.worker.name
+        awslogs-region        = data.aws_region.current.name
+        awslogs-stream-prefix = "worker"
+      }
+    }
+
+    healthCheck = {
+      command     = ["CMD-SHELL", "nc -z localhost 8081 || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 10
+    }
+  }])
+
+  tags = local.common_tags
+}
+
+resource "aws_ecs_service" "worker" {
+  name            = "${local.prefix}-worker"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.worker.arn
+  desired_count   = var.worker_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.worker_security_group_id]
+    assign_public_ip = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-worker" })
+
+  depends_on = [aws_ecs_cluster.main]
+}
+
+# ── Task Ingest API ──────────────────────────────────────────────────────────
+
+resource "aws_cloudwatch_log_group" "ingest" {
+  name              = "/ecs/${local.prefix}/ingest"
+  retention_in_days = 7
+  tags              = local.common_tags
+}
+
+resource "aws_ecs_task_definition" "ingest" {
+  family                   = "${local.prefix}-ingest"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.ingest_cpu
+  memory                   = var.ingest_memory
+  task_role_arn            = var.lab_role_arn
+  execution_role_arn       = var.lab_role_arn
+
+  container_definitions = jsonencode([{
+    name      = "ingest"
+    image     = var.ingest_image
+    essential = true
+
+    portMappings = [{
+      containerPort = 8080
+      protocol      = "tcp"
+    }]
+
+    environment = [
+      { name = "DYNAMO_TABLE", value = var.tasks_table_name },
+      { name = "S3_BUCKET",    value = var.task_data_bucket },
+      { name = "SQS_QUEUE_URL", value = var.ingest_queue_url },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.ingest.name
+        awslogs-region        = data.aws_region.current.name
+        awslogs-stream-prefix = "ingest"
+      }
+    }
+
+    healthCheck = {
+      command     = ["CMD-SHELL", "nc -z localhost 8080 || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 10
+    }
+  }])
+
+  tags = local.common_tags
+}
+
+resource "aws_ecs_service" "ingest" {
+  name            = "${local.prefix}-ingest"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.ingest.arn
+  desired_count   = var.ingest_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.ingest_security_group_id]
+    assign_public_ip = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-ingest" })
+
+  depends_on = [aws_ecs_cluster.main]
+}
+
+# ── State Observer ───────────────────────────────────────────────────────────
+
+resource "aws_cloudwatch_log_group" "observer" {
+  name              = "/ecs/${local.prefix}/observer"
+  retention_in_days = 7
+  tags              = local.common_tags
+}
+
+resource "aws_ecs_task_definition" "observer" {
+  family                   = "${local.prefix}-observer"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 256
+  memory                   = 512
+  task_role_arn            = var.lab_role_arn
+  execution_role_arn       = var.lab_role_arn
+
+  container_definitions = jsonencode([{
+    name      = "observer"
+    image     = var.observer_image
+    essential = true
+
+    portMappings = [{
+      containerPort = 9090
+      protocol      = "tcp"
+    }]
+
+    environment = [
+      { name = "PEERS_TABLE",          value = var.peers_table_name },
+      { name = "COORDINATOR_NODE_IDS", value = join(",", local.all_node_ids) },
+      { name = "COORDINATOR_HTTP_PORT", value = tostring(var.http_port) },
+      { name = "AWS_REGION",     value = data.aws_region.current.name },
+      { name = "CW_NAMESPACE",   value = "Driftless/Raft" },
+      { name = "SNS_TOPIC_ARN",  value = var.sns_topic_arn },
+    ]
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.observer.name
+        awslogs-region        = data.aws_region.current.name
+        awslogs-stream-prefix = "observer"
+      }
+    }
+  }])
+
+  tags = local.common_tags
+}
+
+resource "aws_ecs_service" "observer" {
+  name            = "${local.prefix}-observer"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.observer.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.observer_security_group_id]
+    assign_public_ip = false
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.prefix}-observer" })
 
   depends_on = [aws_ecs_cluster.main]
 }

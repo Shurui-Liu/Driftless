@@ -19,6 +19,17 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
+locals {
+  # Default to the voclabs LabRole when no explicit ARN is supplied.
+  lab_role_arn = (
+    var.lab_role_arn != ""
+    ? var.lab_role_arn
+    : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  )
+}
+
 # ── Networking ────────────────────────────────────────────────────────────────
 # Dev: single AZ to keep NAT gateway costs low.
 
@@ -33,15 +44,13 @@ module "networking" {
 }
 
 # ── Storage ───────────────────────────────────────────────────────────────────
-# Replace YOUR_ACCOUNT_ID with your real AWS account ID before applying.
-# Find it with: aws sts get-caller-identity --query Account --output text
 
 module "storage" {
   source      = "../../modules/storage"
   environment = "dev"
   project     = "raft-coordinator"
 
-  lab_role_arn                = "arn:aws:iam::YOUR_ACCOUNT_ID:role/labRole"
+  lab_role_arn                = local.lab_role_arn
   task_payload_retention_days = 7
   raft_log_retention_days     = 30
 }
@@ -70,13 +79,16 @@ module "ecs_cluster" {
   lab_role_arn          = module.storage.lab_role_arn
   tasks_table_name      = module.storage.tasks_table_name
   raft_state_table_name = module.storage.raft_state_table_name
+  peers_table_name      = module.storage.peers_table_name
   task_data_bucket      = module.storage.task_data_bucket
   raft_snapshots_bucket = module.storage.raft_snapshots_bucket
 
   # From networking module
   private_subnet_ids            = module.networking.private_subnet_ids
   coordinator_security_group_id = module.networking.coordinator_security_group_id
-  service_discovery_service_arn = module.networking.service_discovery_service_arn
+  worker_security_group_id      = module.networking.worker_security_group_id
+  ingest_security_group_id      = module.networking.ingest_security_group_id
+  observer_security_group_id    = module.networking.observer_security_group_id
 
   # From messaging module
   ingest_queue_url     = module.messaging.ingest_queue_url
@@ -84,10 +96,25 @@ module "ecs_cluster" {
   results_queue_url    = module.messaging.results_queue_url
 
   # Coordinator config
-  coordinator_image = "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator:latest"
-  coordinator_count = 1   # single node for dev; set to 3 in prod
-  coordinator_cpu   = 512
+  coordinator_image  = "${module.storage.coordinator_ecr_url}:latest"
+  # Start at 1 for the first apply (images don't exist yet; 3x restart churn).
+  # After `docker push`, bump to 3 and re-apply for the experiments.
+  coordinator_count  = var.coordinator_count
+  coordinator_cpu    = 512
   coordinator_memory = 1024
+
+  # Worker config
+  worker_image  = "${module.storage.worker_ecr_url}:latest"
+  worker_count  = 2
+  worker_cpu    = 256
+  worker_memory = 512
+
+  # Ingest API config
+  ingest_image = "${module.storage.ingest_ecr_url}:latest"
+  ingest_count = 1
+
+  # Observer config
+  observer_image = "${module.storage.observer_ecr_url}:latest"
 }
 
 # ── Outputs ───────────────────────────────────────────────────────────────────
@@ -104,3 +131,7 @@ output "task_data_bucket"         { value = module.storage.task_data_bucket }
 output "raft_snapshots_bucket"    { value = module.storage.raft_snapshots_bucket }
 output "ecs_cluster_name"         { value = module.ecs_cluster.cluster_name }
 output "coordinator_log_group"    { value = module.ecs_cluster.log_group_name }
+output "coordinator_ecr_url"     { value = module.storage.coordinator_ecr_url }
+output "worker_ecr_url"          { value = module.storage.worker_ecr_url }
+output "ingest_ecr_url"          { value = module.storage.ingest_ecr_url }
+output "observer_ecr_url"        { value = module.storage.observer_ecr_url }
