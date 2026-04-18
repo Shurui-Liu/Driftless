@@ -83,9 +83,13 @@ for RATE in "${RATES[@]}"; do
     echo "  [1/3] warm-up (${WARMUP_S}s, not measured)…"
     "$LOADGEN" -rate="$RATE" -duration="${WARMUP_S}s" -url="$INGEST_URL" || true
 
-    # Measurement window.
+    # Measurement window — capture output to parse throughput numbers.
     echo "  [2/3] measuring (${MEASURE_S}s)…"
-    "$LOADGEN" -rate="$RATE" -duration="${MEASURE_S}s" -url="$INGEST_URL"
+    loadgen_out=$("$LOADGEN" -rate="$RATE" -duration="${MEASURE_S}s" -url="$INGEST_URL")
+    echo "$loadgen_out"
+    SUBMITTED=$(echo "$loadgen_out" | sed -n 's/.*submitted=\([0-9]*\).*/\1/p')
+    FAILED=$(echo "$loadgen_out"    | sed -n 's/.*failed=\([0-9]*\).*/\1/p')
+    ACTUAL_RATE=$(echo "$loadgen_out" | sed -n 's/.*actual_rate=\([0-9.]*\).*/\1/p')
 
     # Let the queues drain so all submitted tasks are assigned before we sample.
     echo "  [3/3] draining queues (${COOLDOWN_S}s)…"
@@ -97,6 +101,9 @@ for RATE in "${RATES[@]}"; do
         --table "$TASKS_TABLE" \
         --label "$LABEL" \
         --coordinator "$COORDINATOR_ADDRS" \
+        --submitted "${SUBMITTED:-0}" \
+        --failed "${FAILED:-0}" \
+        --actual-rate "${ACTUAL_RATE:-0}" \
         --output "$RESULTS_FILE"
 done
 

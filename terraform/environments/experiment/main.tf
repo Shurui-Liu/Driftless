@@ -88,7 +88,10 @@ module "ecs_cluster" {
 
   private_subnet_ids            = module.networking.private_subnet_ids
   coordinator_security_group_id = module.networking.coordinator_security_group_id
-  service_discovery_service_arn = module.networking.service_discovery_service_arn
+  worker_security_group_id      = module.networking.worker_security_group_id
+  ingest_security_group_id      = module.networking.ingest_security_group_id
+  observer_security_group_id    = module.networking.observer_security_group_id
+  peers_table_name              = module.storage.peers_table_name
 
   ingest_queue_url     = module.messaging.ingest_queue_url
   assignment_queue_url = module.messaging.assignment_queue_url

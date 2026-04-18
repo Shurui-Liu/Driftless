@@ -122,6 +122,12 @@ def main() -> None:
                         help="experiment label, e.g. '3node_500tpm'")
     parser.add_argument("--coordinator", default="",
                         help="coordinator HTTP URL(s), comma-separated")
+    parser.add_argument("--submitted",   type=int,   default=0,
+                        help="tasks submitted by load generator (from loadgen stdout)")
+    parser.add_argument("--failed",      type=int,   default=0,
+                        help="tasks that got non-202 responses from load generator")
+    parser.add_argument("--actual-rate", type=float, default=0.0, dest="actual_rate",
+                        help="actual submission rate achieved (tasks/min)")
     parser.add_argument("--output",      default="-",
                         help="output CSV file path (default: stdout)")
     args = parser.parse_args()
@@ -140,14 +146,17 @@ def main() -> None:
 
     # Build result row
     row: dict = {
-        "label":       args.label,
-        "n":           len(latencies),
-        "p50_ms":      round(pct(latencies, 50), 2),
-        "p95_ms":      round(pct(latencies, 95), 2),
-        "p99_ms":      round(pct(latencies, 99), 2),
-        "max_ms":      round(max(latencies), 2),
-        "min_ms":      round(min(latencies), 2),
-        "collected_at": datetime.now(timezone.utc).isoformat(),
+        "label":           args.label,
+        "n":               len(latencies),
+        "p50_ms":          round(pct(latencies, 50), 2),
+        "p95_ms":          round(pct(latencies, 95), 2),
+        "p99_ms":          round(pct(latencies, 99), 2),
+        "max_ms":          round(max(latencies), 2),
+        "min_ms":          round(min(latencies), 2),
+        "submitted":       args.submitted,
+        "failed":          args.failed,
+        "actual_rate_tpm": round(args.actual_rate, 2),
+        "collected_at":    datetime.now(timezone.utc).isoformat(),
     }
     for peer, lag in sorted(lag_map.items()):
         row[f"rep_lag_{peer}"] = lag
@@ -157,7 +166,9 @@ def main() -> None:
     print(
         f"[{args.label}] n={row['n']}  "
         f"p50={row['p50_ms']}ms  p95={row['p95_ms']}ms  p99={row['p99_ms']}ms  "
-        f"max={row['max_ms']}ms" + (f"  rep_lag: {lag_str}" if lag_str else ""),
+        f"max={row['max_ms']}ms  "
+        f"submitted={row['submitted']} failed={row['failed']} rate={row['actual_rate_tpm']}/min"
+        + (f"  rep_lag: {lag_str}" if lag_str else ""),
         file=sys.stderr,
     )
 

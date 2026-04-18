@@ -344,7 +344,7 @@ func (d *Dispatcher) markAssigned(ctx context.Context, taskID string) error {
 		Key: map[string]types.AttributeValue{
 			"task_id": &types.AttributeValueMemberS{Value: taskID},
 		},
-		UpdateExpression: aws.String("SET #st = :assigned, updated_at = :now"),
+		UpdateExpression: aws.String("SET #st = :assigned, updated_at = :now, dispatched_at = :now"),
 		ConditionExpression: aws.String(
 			"attribute_not_exists(#st) OR #st = :pending",
 		),
