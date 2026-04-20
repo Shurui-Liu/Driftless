@@ -140,6 +140,14 @@ func (w *Worker) poll(ctx context.Context) {
 		return
 	}
 
+	// Atomic duplicate-dispatch counter for Exp 1. `receive_count > 1` on any
+	// task after a run means that task_id was dispatched more than once —
+	// either by the Raft leader committing a duplicate entry, or by SQS
+	// re-delivering after a visibility timeout.
+	if err := w.incrementReceiveCount(ctx, assignment.TaskID); err != nil {
+		log.Printf("receive_count increment failed for %s: %v", assignment.TaskID, err)
+	}
+
 	// Process the task — delete SQS message only on success
 	if err := w.processTask(ctx, assignment); err != nil {
 		log.Printf("task %s failed: %v", assignment.TaskID, err)
@@ -271,6 +279,22 @@ func (w *Worker) updateStatus(ctx context.Context, taskID, status, resultKey str
 			"#st": "status",
 		},
 		ExpressionAttributeValues: item,
+	})
+	return err
+}
+
+// incrementReceiveCount bumps receive_count on the task item by 1.
+// Idempotent on failure — a missed increment just under-reports duplicates.
+func (w *Worker) incrementReceiveCount(ctx context.Context, taskID string) error {
+	_, err := w.db.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]types.AttributeValue{
+			"task_id": &types.AttributeValueMemberS{Value: taskID},
+		},
+		UpdateExpression: aws.String("ADD receive_count :one"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":one": &types.AttributeValueMemberN{Value: "1"},
+		},
 	})
 	return err
 }

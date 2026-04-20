@@ -1,0 +1,19 @@
+{
+  "run_name": "exp4-20260419T053356Z",
+  "leader_node_id": "coordinator-b",
+  "follower_node_id": "coordinator-a",
+  "leader_commit_at_kill": 35588,
+  "snapshot_size_bytes": 2943364,
+  "raw_log_size_bytes_estimate": 7829360,
+  "recovery_timeline": {
+    "node_id": "coordinator-a",
+    "killed_ns": 1776577098013936000,
+    "leader_commit_at_kill": 35588,
+    "restart_ms": 35178.064,
+    "snapshot_restored_ms": 35178.064,
+    "snapshot_last_index": null,
+    "catchup_ms": null,
+    "final_commit_index": null,
+    "used_snapshot": true
+  }
+}

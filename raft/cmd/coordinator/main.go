@@ -130,10 +130,25 @@ func main() {
 	}
 
 	// ── Dial peers ───────────────────────────────────────────────────────────
+	// In production, wire up a resolver so GRPCPeer can rebuild the conn if
+	// a peer's IP changes (ECS task restart → new ENI). Without this, a
+	// single leader kill permanently strands followers at the dead IP and
+	// the cluster can't form quorum until every surviving node is also
+	// restarted. See grpc_client.go:PeerResolver.
+	var resolver raft.PeerResolver
+	if peersRegistry != nil {
+		resolver = func(ctx context.Context, nodeID string) (string, string, error) {
+			info, err := peersRegistry.Lookup(ctx, nodeID)
+			if err != nil {
+				return "", "", err
+			}
+			return info.GRPCAddr, info.HTTPAddr, nil
+		}
+	}
 	peers := make([]raft.Peer, 0, len(resolved))
 	grpcPeers := make([]*raft.GRPCPeer, 0, len(resolved))
 	for _, rp := range resolved {
-		p, err := raft.NewGRPCPeer(rp.ID, rp.GRPCAddr, rp.HTTPURL)
+		p, err := raft.NewGRPCPeer(rp.ID, rp.GRPCAddr, rp.HTTPURL, resolver)
 		if err != nil {
 			log.Error("failed to dial peer", "id", rp.ID, "addr", rp.GRPCAddr, "err", err)
 			os.Exit(1)
@@ -147,8 +162,10 @@ func main() {
 	node := raft.NewNode(nodeID, peers, log)
 
 	// Peers heartbeat now that node exists; each tick publishes live leadership.
+	// 500ms gives Exp 1's leader tracker sub-second visibility into elections
+	// without adding meaningful DDB cost at 3-5 nodes.
 	if peersRegistry != nil {
-		peersRegistry.StartHeartbeat(ctx, peersSelf, 10*time.Second, node.IsLeader)
+		peersRegistry.StartHeartbeat(ctx, peersSelf, 500*time.Millisecond, node.IsLeader)
 	}
 
 	var wg sync.WaitGroup
@@ -253,6 +270,33 @@ func main() {
 	}
 
 	log.Info("coordinator started", "id", nodeID, "grpc_port", grpcPort, "http_port", httpPort, "peers", len(resolved))
+
+	// Periodic state tick — lets Exp 4 reconstruct follower commit-index
+	// catch-up from CloudWatch logs without needing in-VPC /state access.
+	// Interval is intentionally aggressive because the line is tiny and the
+	// stream is already the canonical recovery timeline.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		t := time.NewTicker(2 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				s := node.Snapshot()
+				log.Info("raft tick",
+					"role", s.State,
+					"term", s.CurrentTerm,
+					"commit_index", s.CommitIndex,
+					"last_applied", s.LastApplied,
+					"log_len", s.LogLength,
+				)
+			}
+		}
+	}()
+
 	wg.Wait()
 
 	// ── Clean up peer connections ─────────────────────────────────────────────
