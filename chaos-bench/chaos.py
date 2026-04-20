@@ -33,6 +33,7 @@ class ChaosInjector:
         session = boto3.session.Session(region_name=cfg.aws_region)
         self.ecs = session.client("ecs")
         self.ddb = session.client("dynamodb")
+        self.sqs = session.client("sqs")
 
     def _running_tasks(self, service: str) -> list[str]:
         resp = self.ecs.list_tasks(
@@ -65,3 +66,25 @@ class ChaosInjector:
 
     def kill_worker(self) -> KillResult | None:
         return self.stop_random_task(self.cfg.worker_service, "chaos: worker kill")
+
+    def inject_sqs_redelivery(self, queue_url: str, count: int = 5) -> int:
+        """Force up to `count` in-flight ingest messages to redeliver immediately.
+
+        Simulates an SQS visibility timeout expiry: we receive messages (making
+        them invisible) then immediately reset visibility to 0, so the ingest
+        service sees the same task_id again. The Raft dispatcher's deduplication
+        map must prevent a second assignment from being published.
+        """
+        resp = self.sqs.receive_message(
+            QueueUrl=queue_url,
+            MaxNumberOfMessages=min(count, 10),
+            VisibilityTimeout=10,
+        )
+        msgs = resp.get("Messages", [])
+        for msg in msgs:
+            self.sqs.change_message_visibility(
+                QueueUrl=queue_url,
+                ReceiptHandle=msg["ReceiptHandle"],
+                VisibilityTimeout=0,
+            )
+        return len(msgs)
