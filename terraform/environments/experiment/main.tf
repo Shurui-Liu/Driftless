@@ -43,6 +43,7 @@ module "networking" {
   environment = "experiment"
   project     = "raft-coordinator"
 
+  vpc_cidr             = "10.2.0.0/16"
   availability_zones   = ["us-east-1a"]
   public_subnet_cidrs  = ["10.2.1.0/24"]
   private_subnet_cidrs = ["10.2.11.0/24"]
@@ -55,7 +56,7 @@ module "storage" {
   environment = "experiment"
   project     = "raft-coordinator"
 
-  lab_role_arn                = "arn:aws:iam::${var.account_id}:role/labRole"
+  lab_role_arn                = "arn:aws:iam::${var.account_id}:role/LabRole"
   task_payload_retention_days = 1   # keep data for 1 day only — experiment data
   raft_log_retention_days     = 7
 }
