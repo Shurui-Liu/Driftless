@@ -6,7 +6,8 @@
       "Bash(go get *)",
       "Bash(go mod *)",
       "Bash(go build *)",
-      "Bash(aws ec2 *)"
+      "Bash(aws ec2 *)",
+      "Bash(aws ecs list-services *)"
     ]
   }
 }

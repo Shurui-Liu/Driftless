@@ -21,6 +21,11 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
+variable "public_subnet_ids" {
+  description = "Public subnet IDs from the networking module (ingest API runs here)"
+  type        = list(string)
+}
+
 variable "coordinator_security_group_id" {
   description = "Security group ID for coordinator tasks (from networking module)"
   type        = string

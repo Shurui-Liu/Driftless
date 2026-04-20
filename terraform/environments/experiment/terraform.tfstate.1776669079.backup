@@ -1,0 +1,3009 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.3",
+  "serial": 79,
+  "lineage": "23b87ed6-adeb-33aa-0cba-244aef2a4f9a",
+  "outputs": {
+    "assignment_queue_url": {
+      "value": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment",
+      "type": "string"
+    },
+    "coordinator_count": {
+      "value": 3,
+      "type": "number"
+    },
+    "coordinator_log_group": {
+      "value": "/ecs/raft-coordinator-experiment/coordinator",
+      "type": "string"
+    },
+    "ecs_cluster_name": {
+      "value": "raft-coordinator-experiment-cluster",
+      "type": "string"
+    },
+    "ingest_queue_url": {
+      "value": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest",
+      "type": "string"
+    },
+    "tasks_table_name": {
+      "value": "raft-coordinator-experiment-tasks",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "module": "module.ecs_cluster",
+      "mode": "data",
+      "type": "aws_region",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "US East (N. Virginia)",
+            "endpoint": "ec2.us-east-1.amazonaws.com",
+            "id": "us-east-1",
+            "name": "us-east-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "coordinator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:us-east-1:471112634889:log-group:/ecs/raft-coordinator-experiment/coordinator",
+            "id": "/ecs/raft-coordinator-experiment/coordinator",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/ecs/raft-coordinator-experiment/coordinator",
+            "name_prefix": "",
+            "retention_in_days": 7,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:us-east-1:471112634889:log-group:/ecs/raft-coordinator-experiment/ingest",
+            "id": "/ecs/raft-coordinator-experiment/ingest",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/ecs/raft-coordinator-experiment/ingest",
+            "name_prefix": "",
+            "retention_in_days": 7,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "observer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:us-east-1:471112634889:log-group:/ecs/raft-coordinator-experiment/observer",
+            "id": "/ecs/raft-coordinator-experiment/observer",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/ecs/raft-coordinator-experiment/observer",
+            "name_prefix": "",
+            "retention_in_days": 7,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_cloudwatch_log_group",
+      "name": "worker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:logs:us-east-1:471112634889:log-group:/ecs/raft-coordinator-experiment/worker",
+            "id": "/ecs/raft-coordinator-experiment/worker",
+            "kms_key_id": "",
+            "log_group_class": "STANDARD",
+            "name": "/ecs/raft-coordinator-experiment/worker",
+            "name_prefix": "",
+            "retention_in_days": 7,
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_cluster",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "configuration": [],
+            "id": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "name": "raft-coordinator-experiment-cluster",
+            "service_connect_defaults": [],
+            "setting": [
+              {
+                "name": "containerInsights",
+                "value": "enabled"
+              }
+            ],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-cluster",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-cluster",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_cluster_capacity_providers",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "capacity_providers": [
+              "FARGATE",
+              "FARGATE_SPOT"
+            ],
+            "cluster_name": "raft-coordinator-experiment-cluster",
+            "default_capacity_provider_strategy": [
+              {
+                "base": 0,
+                "capacity_provider": "FARGATE",
+                "weight": 1
+              }
+            ],
+            "id": "raft-coordinator-experiment-cluster"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.ecs_cluster.aws_ecs_cluster.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_service",
+      "name": "coordinator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": "coordinator-a",
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 1,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-coordinator-a",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-coordinator-a",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-0b476971e59855295"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-a",
+              "NodeID": "coordinator-a",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-a",
+              "NodeID": "coordinator-a",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-a:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.networking.aws_security_group.coordinator",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        },
+        {
+          "index_key": "coordinator-b",
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 1,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-coordinator-b",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-coordinator-b",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-0b476971e59855295"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-b",
+              "NodeID": "coordinator-b",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-b",
+              "NodeID": "coordinator-b",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-b:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.networking.aws_security_group.coordinator",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        },
+        {
+          "index_key": "coordinator-c",
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 1,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-coordinator-c",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-coordinator-c",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-0b476971e59855295"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-c",
+              "NodeID": "coordinator-c",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-c",
+              "NodeID": "coordinator-c",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-c:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.networking.aws_security_group.coordinator",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_service",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 1,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-ingest",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-ingest",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-0a8a61bf75e93dc0c"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-ingest:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.ingest",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.ingest",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.networking.aws_security_group.ingest",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_service",
+      "name": "observer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 1,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-observer",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-observer",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-0546c9cd6e4cb7842"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-observer:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.observer",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.observer",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.networking.aws_security_group.observer",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.peers"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_service",
+      "name": "worker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "alarms": [],
+            "availability_zone_rebalancing": "DISABLED",
+            "capacity_provider_strategy": [],
+            "cluster": "arn:aws:ecs:us-east-1:471112634889:cluster/raft-coordinator-experiment-cluster",
+            "deployment_circuit_breaker": [
+              {
+                "enable": false,
+                "rollback": false
+              }
+            ],
+            "deployment_controller": [
+              {
+                "type": "ECS"
+              }
+            ],
+            "deployment_maximum_percent": 200,
+            "deployment_minimum_healthy_percent": 100,
+            "desired_count": 2,
+            "enable_ecs_managed_tags": false,
+            "enable_execute_command": false,
+            "force_delete": null,
+            "force_new_deployment": null,
+            "health_check_grace_period_seconds": 0,
+            "iam_role": "/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "id": "arn:aws:ecs:us-east-1:471112634889:service/raft-coordinator-experiment-cluster/raft-coordinator-experiment-worker",
+            "launch_type": "FARGATE",
+            "load_balancer": [],
+            "name": "raft-coordinator-experiment-worker",
+            "network_configuration": [
+              {
+                "assign_public_ip": false,
+                "security_groups": [
+                  "sg-000d5dc25f73ca804"
+                ],
+                "subnets": [
+                  "subnet-0500cf324cd179ba2"
+                ]
+              }
+            ],
+            "ordered_placement_strategy": [],
+            "placement_constraints": [],
+            "platform_version": "LATEST",
+            "propagate_tags": "NONE",
+            "scheduling_strategy": "REPLICA",
+            "service_connect_configuration": [],
+            "service_registries": [],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker",
+              "Project": "raft-coordinator"
+            },
+            "task_definition": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-worker:1",
+            "timeouts": null,
+            "triggers": {},
+            "volume_configuration": [],
+            "vpc_lattice_configurations": [],
+            "wait_for_steady_state": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.worker",
+            "module.ecs_cluster.aws_ecs_cluster.main",
+            "module.ecs_cluster.aws_ecs_task_definition.worker",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.networking.aws_security_group.worker",
+            "module.networking.aws_subnet.private",
+            "module.networking.aws_vpc.main",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_task_definition",
+      "name": "coordinator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": "coordinator-a",
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-a:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-a",
+            "container_definitions": "[{\"environment\":[{\"name\":\"DYNAMO_TABLE\",\"value\":\"raft-coordinator-experiment-tasks\"},{\"name\":\"EXPECTED_PEER_IDS\",\"value\":\"coordinator-b,coordinator-c\"},{\"name\":\"GRPC_PORT\",\"value\":\"50051\"},{\"name\":\"HTTP_PORT\",\"value\":\"8080\"},{\"name\":\"NODE_ID\",\"value\":\"coordinator-a\"},{\"name\":\"PEERS_TABLE\",\"value\":\"raft-coordinator-experiment-peers\"},{\"name\":\"SNAPSHOT_S3_BUCKET\",\"value\":\"raft-coordinator-experiment-raft-snapshots-471112634889\"},{\"name\":\"SQS_ASSIGNMENT_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment\"},{\"name\":\"SQS_INGEST_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest\"}],\"essential\":true,\"healthCheck\":{\"command\":[\"CMD-SHELL\",\"nc -z localhost 50051 || exit 1\"],\"interval\":10,\"retries\":3,\"startPeriod\":15,\"timeout\":5},\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"/ecs/raft-coordinator-experiment/coordinator\",\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"coordinator-a\"}},\"mountPoints\":[],\"name\":\"coordinator\",\"portMappings\":[{\"containerPort\":50051,\"hostPort\":50051,\"protocol\":\"tcp\"},{\"containerPort\":8080,\"hostPort\":8080,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "1024",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-coordinator-a",
+            "id": "raft-coordinator-experiment-coordinator-a",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "2048",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-a",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-a",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        },
+        {
+          "index_key": "coordinator-b",
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-b:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-b",
+            "container_definitions": "[{\"environment\":[{\"name\":\"DYNAMO_TABLE\",\"value\":\"raft-coordinator-experiment-tasks\"},{\"name\":\"EXPECTED_PEER_IDS\",\"value\":\"coordinator-a,coordinator-c\"},{\"name\":\"GRPC_PORT\",\"value\":\"50051\"},{\"name\":\"HTTP_PORT\",\"value\":\"8080\"},{\"name\":\"NODE_ID\",\"value\":\"coordinator-b\"},{\"name\":\"PEERS_TABLE\",\"value\":\"raft-coordinator-experiment-peers\"},{\"name\":\"SNAPSHOT_S3_BUCKET\",\"value\":\"raft-coordinator-experiment-raft-snapshots-471112634889\"},{\"name\":\"SQS_ASSIGNMENT_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment\"},{\"name\":\"SQS_INGEST_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest\"}],\"essential\":true,\"healthCheck\":{\"command\":[\"CMD-SHELL\",\"nc -z localhost 50051 || exit 1\"],\"interval\":10,\"retries\":3,\"startPeriod\":15,\"timeout\":5},\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"coordinator-b\",\"awslogs-group\":\"/ecs/raft-coordinator-experiment/coordinator\"}},\"mountPoints\":[],\"name\":\"coordinator\",\"portMappings\":[{\"containerPort\":50051,\"hostPort\":50051,\"protocol\":\"tcp\"},{\"containerPort\":8080,\"hostPort\":8080,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "1024",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-coordinator-b",
+            "id": "raft-coordinator-experiment-coordinator-b",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "2048",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-b",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-b",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        },
+        {
+          "index_key": "coordinator-c",
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-c:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-coordinator-c",
+            "container_definitions": "[{\"environment\":[{\"name\":\"DYNAMO_TABLE\",\"value\":\"raft-coordinator-experiment-tasks\"},{\"name\":\"EXPECTED_PEER_IDS\",\"value\":\"coordinator-a,coordinator-b\"},{\"name\":\"GRPC_PORT\",\"value\":\"50051\"},{\"name\":\"HTTP_PORT\",\"value\":\"8080\"},{\"name\":\"NODE_ID\",\"value\":\"coordinator-c\"},{\"name\":\"PEERS_TABLE\",\"value\":\"raft-coordinator-experiment-peers\"},{\"name\":\"SNAPSHOT_S3_BUCKET\",\"value\":\"raft-coordinator-experiment-raft-snapshots-471112634889\"},{\"name\":\"SQS_ASSIGNMENT_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment\"},{\"name\":\"SQS_INGEST_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest\"}],\"essential\":true,\"healthCheck\":{\"command\":[\"CMD-SHELL\",\"nc -z localhost 50051 || exit 1\"],\"interval\":10,\"retries\":3,\"startPeriod\":15,\"timeout\":5},\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-stream-prefix\":\"coordinator-c\",\"awslogs-group\":\"/ecs/raft-coordinator-experiment/coordinator\",\"awslogs-region\":\"us-east-1\"}},\"mountPoints\":[],\"name\":\"coordinator\",\"portMappings\":[{\"containerPort\":50051,\"hostPort\":50051,\"protocol\":\"tcp\"},{\"containerPort\":8080,\"hostPort\":8080,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "1024",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-coordinator-c",
+            "id": "raft-coordinator-experiment-coordinator-c",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "2048",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-c",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "NodeID": "coordinator-c",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.coordinator",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_task_definition",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-ingest:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-ingest",
+            "container_definitions": "[{\"environment\":[{\"name\":\"DYNAMO_TABLE\",\"value\":\"raft-coordinator-experiment-tasks\"},{\"name\":\"S3_BUCKET\",\"value\":\"raft-coordinator-experiment-task-data-471112634889\"},{\"name\":\"SQS_QUEUE_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest\"}],\"essential\":true,\"healthCheck\":{\"command\":[\"CMD-SHELL\",\"nc -z localhost 8080 || exit 1\"],\"interval\":10,\"retries\":3,\"startPeriod\":10,\"timeout\":5},\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-ingest:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"/ecs/raft-coordinator-experiment/ingest\",\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"ingest\"}},\"mountPoints\":[],\"name\":\"ingest\",\"portMappings\":[{\"containerPort\":8080,\"hostPort\":8080,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "256",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-ingest",
+            "id": "raft-coordinator-experiment-ingest",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "512",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.ingest",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_task_definition",
+      "name": "observer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-observer:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-observer",
+            "container_definitions": "[{\"environment\":[{\"name\":\"AWS_REGION\",\"value\":\"us-east-1\"},{\"name\":\"COORDINATOR_HTTP_PORT\",\"value\":\"8080\"},{\"name\":\"COORDINATOR_NODE_IDS\",\"value\":\"coordinator-a,coordinator-b,coordinator-c\"},{\"name\":\"CW_NAMESPACE\",\"value\":\"Driftless/Raft\"},{\"name\":\"PEERS_TABLE\",\"value\":\"raft-coordinator-experiment-peers\"},{\"name\":\"SNS_TOPIC_ARN\",\"value\":\"\"}],\"essential\":true,\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-observer:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"observer\",\"awslogs-group\":\"/ecs/raft-coordinator-experiment/observer\"}},\"mountPoints\":[],\"name\":\"observer\",\"portMappings\":[{\"containerPort\":9090,\"hostPort\":9090,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "256",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-observer",
+            "id": "raft-coordinator-experiment-observer",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "512",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.observer",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.storage.aws_dynamodb_table.peers"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.ecs_cluster",
+      "mode": "managed",
+      "type": "aws_ecs_task_definition",
+      "name": "worker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-worker:1",
+            "arn_without_revision": "arn:aws:ecs:us-east-1:471112634889:task-definition/raft-coordinator-experiment-worker",
+            "container_definitions": "[{\"environment\":[{\"name\":\"COORDINATOR_HTTP_PORT\",\"value\":\"8080\"},{\"name\":\"COORDINATOR_NODE_IDS\",\"value\":\"coordinator-a,coordinator-b,coordinator-c\"},{\"name\":\"DYNAMO_TABLE\",\"value\":\"raft-coordinator-experiment-tasks\"},{\"name\":\"PEERS_TABLE\",\"value\":\"raft-coordinator-experiment-peers\"},{\"name\":\"S3_BUCKET\",\"value\":\"raft-coordinator-experiment-task-data-471112634889\"},{\"name\":\"SQS_ASSIGNMENT_URL\",\"value\":\"https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment\"}],\"essential\":true,\"healthCheck\":{\"command\":[\"CMD-SHELL\",\"nc -z localhost 8081 || exit 1\"],\"interval\":10,\"retries\":3,\"startPeriod\":10,\"timeout\":5},\"image\":\"471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-worker:latest\",\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"/ecs/raft-coordinator-experiment/worker\",\"awslogs-region\":\"us-east-1\",\"awslogs-stream-prefix\":\"worker\"}},\"mountPoints\":[],\"name\":\"worker\",\"portMappings\":[{\"containerPort\":8081,\"hostPort\":8081,\"protocol\":\"tcp\"}],\"systemControls\":[],\"volumesFrom\":[]}]",
+            "cpu": "256",
+            "enable_fault_injection": false,
+            "ephemeral_storage": [],
+            "execution_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "family": "raft-coordinator-experiment-worker",
+            "id": "raft-coordinator-experiment-worker",
+            "inference_accelerator": [],
+            "ipc_mode": "",
+            "memory": "512",
+            "network_mode": "awsvpc",
+            "pid_mode": "",
+            "placement_constraints": [],
+            "proxy_configuration": [],
+            "requires_compatibilities": [
+              "FARGATE"
+            ],
+            "revision": 1,
+            "runtime_platform": [],
+            "skip_destroy": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "task_role_arn": "arn:aws:iam::471112634889:role/LabRole",
+            "track_latest": false,
+            "volume": []
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.ecs_cluster.aws_cloudwatch_log_group.worker",
+            "module.ecs_cluster.data.aws_region.current",
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.storage.aws_dynamodb_table.peers",
+            "module.storage.aws_dynamodb_table.tasks",
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "471112634889",
+            "arn": "arn:aws:sts::471112634889:assumed-role/voclabs/user4718266=liu.shur@northeastern.edu",
+            "id": "471112634889",
+            "user_id": "AROAW3MEAKIEZ2YXRONJZ:user4718266=liu.shur@northeastern.edu"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "assignment",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-assignment",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 345600,
+            "name": "raft-coordinator-experiment-assignment",
+            "name_prefix": "",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-assignment\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "receive_wait_time_seconds": 20,
+            "redrive_allow_policy": "",
+            "redrive_policy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-assignment-dlq\",\"maxReceiveCount\":3}",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment",
+            "visibility_timeout_seconds": 300
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.assignment_dlq"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "assignment_dlq",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-assignment-dlq",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment-dlq",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 1209600,
+            "name": "raft-coordinator-experiment-assignment-dlq",
+            "name_prefix": "",
+            "policy": "",
+            "receive_wait_time_seconds": 0,
+            "redrive_allow_policy": "",
+            "redrive_policy": "",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment-dlq",
+            "visibility_timeout_seconds": 30
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-ingest",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 345600,
+            "name": "raft-coordinator-experiment-ingest",
+            "name_prefix": "",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-ingest\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "receive_wait_time_seconds": 20,
+            "redrive_allow_policy": "",
+            "redrive_policy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-ingest-dlq\",\"maxReceiveCount\":3}",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest",
+            "visibility_timeout_seconds": 60
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.ingest_dlq"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "ingest_dlq",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-ingest-dlq",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest-dlq",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 1209600,
+            "name": "raft-coordinator-experiment-ingest-dlq",
+            "name_prefix": "",
+            "policy": "",
+            "receive_wait_time_seconds": 0,
+            "redrive_allow_policy": "",
+            "redrive_policy": "",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest-dlq",
+            "visibility_timeout_seconds": 30
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "results",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-results",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 345600,
+            "name": "raft-coordinator-experiment-results",
+            "name_prefix": "",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-results\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "receive_wait_time_seconds": 20,
+            "redrive_allow_policy": "",
+            "redrive_policy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-results-dlq\",\"maxReceiveCount\":3}",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results",
+            "visibility_timeout_seconds": 60
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.results_dlq"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue",
+      "name": "results_dlq",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-results-dlq",
+            "content_based_deduplication": false,
+            "deduplication_scope": "",
+            "delay_seconds": 0,
+            "fifo_queue": false,
+            "fifo_throughput_limit": "",
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results-dlq",
+            "kms_data_key_reuse_period_seconds": 300,
+            "kms_master_key_id": "",
+            "max_message_size": 262144,
+            "message_retention_seconds": 1209600,
+            "name": "raft-coordinator-experiment-results-dlq",
+            "name_prefix": "",
+            "policy": "",
+            "receive_wait_time_seconds": 0,
+            "redrive_allow_policy": "",
+            "redrive_policy": "",
+            "sqs_managed_sse_enabled": true,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results-dlq",
+            "visibility_timeout_seconds": 30
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAsImRlbGV0ZSI6MTgwMDAwMDAwMDAwLCJ1cGRhdGUiOjE4MDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue_policy",
+      "name": "assignment",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-assignment\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "queue_url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-assignment"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.assignment",
+            "module.messaging.aws_sqs_queue.assignment_dlq",
+            "module.messaging.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue_policy",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-ingest\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "queue_url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.ingest",
+            "module.messaging.aws_sqs_queue.ingest_dlq",
+            "module.messaging.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.messaging",
+      "mode": "managed",
+      "type": "aws_sqs_queue_policy",
+      "name": "results",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results",
+            "policy": "{\"Statement\":[{\"Action\":[\"sqs:SendMessage\",\"sqs:ReceiveMessage\",\"sqs:DeleteMessage\",\"sqs:GetQueueAttributes\"],\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::471112634889:root\"},\"Resource\":\"arn:aws:sqs:us-east-1:471112634889:raft-coordinator-experiment-results\",\"Sid\":\"AccountAccessOnly\"}],\"Version\":\"2012-10-17\"}",
+            "queue_url": "https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-results"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "module.messaging.aws_sqs_queue.results",
+            "module.messaging.aws_sqs_queue.results_dlq",
+            "module.messaging.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_eip",
+      "name": "nat",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "address": null,
+            "allocation_id": "eipalloc-0bafe3c6825848472",
+            "arn": "arn:aws:ec2:us-east-1:471112634889:elastic-ip/eipalloc-0bafe3c6825848472",
+            "associate_with_private_ip": null,
+            "association_id": "",
+            "carrier_ip": "",
+            "customer_owned_ip": "",
+            "customer_owned_ipv4_pool": "",
+            "domain": "vpc",
+            "id": "eipalloc-0bafe3c6825848472",
+            "instance": "",
+            "ipam_pool_id": null,
+            "network_border_group": "us-east-1",
+            "network_interface": "",
+            "private_dns": null,
+            "private_ip": "",
+            "ptr_record": "",
+            "public_dns": "ec2-44-216-99-94.compute-1.amazonaws.com",
+            "public_ip": "44.216.99.94",
+            "public_ipv4_pool": "amazon",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-nat-eip-0",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-nat-eip-0",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxODAwMDAwMDAwMDAsInJlYWQiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjozMDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_internet_gateway",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:internet-gateway/igw-0d7ce3db1b826bca8",
+            "id": "igw-0d7ce3db1b826bca8",
+            "owner_id": "471112634889",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-igw",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-igw",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "coordinator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:security-group/sg-0b476971e59855295",
+            "description": "Raft coordinator nodes - gRPC peer traffic",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-0b476971e59855295",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "10.2.0.0/16"
+                ],
+                "description": "HTTP from VPC (heartbeat, state, snapshot)",
+                "from_port": 8080,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 8080
+              },
+              {
+                "cidr_blocks": [],
+                "description": "gRPC from other coordinators",
+                "from_port": 50051,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": true,
+                "to_port": 50051
+              }
+            ],
+            "name": "raft-coordinator-experiment-coordinator-sg",
+            "name_prefix": "",
+            "owner_id": "471112634889",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-sg",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator-sg",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:security-group/sg-0a8a61bf75e93dc0c",
+            "description": "Task Ingest API - HTTP inbound",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-0a8a61bf75e93dc0c",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "10.2.0.0/16"
+                ],
+                "description": "HTTP from VPC",
+                "from_port": 8080,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 8080
+              }
+            ],
+            "name": "raft-coordinator-experiment-ingest-sg",
+            "name_prefix": "",
+            "owner_id": "471112634889",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest-sg",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest-sg",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "observer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:security-group/sg-0546c9cd6e4cb7842",
+            "description": "State Observer - Prometheus + outbound to coordinators",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-0546c9cd6e4cb7842",
+            "ingress": [
+              {
+                "cidr_blocks": [
+                  "10.2.0.0/16"
+                ],
+                "description": "Prometheus scrape",
+                "from_port": 9090,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "tcp",
+                "security_groups": [],
+                "self": false,
+                "to_port": 9090
+              }
+            ],
+            "name": "raft-coordinator-experiment-observer-sg",
+            "name_prefix": "",
+            "owner_id": "471112634889",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer-sg",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer-sg",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "worker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:security-group/sg-000d5dc25f73ca804",
+            "description": "Worker nodes - outbound only (polls SQS, heartbeats to coordinator)",
+            "egress": [
+              {
+                "cidr_blocks": [
+                  "0.0.0.0/0"
+                ],
+                "description": "",
+                "from_port": 0,
+                "ipv6_cidr_blocks": [],
+                "prefix_list_ids": [],
+                "protocol": "-1",
+                "security_groups": [],
+                "self": false,
+                "to_port": 0
+              }
+            ],
+            "id": "sg-000d5dc25f73ca804",
+            "ingress": [],
+            "name": "raft-coordinator-experiment-worker-sg",
+            "name_prefix": "",
+            "owner_id": "471112634889",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker-sg",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker-sg",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_subnet",
+      "name": "private",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:subnet/subnet-0500cf324cd179ba2",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1a",
+            "availability_zone_id": "use1-az6",
+            "cidr_block": "10.2.11.0/24",
+            "customer_owned_ipv4_pool": "",
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "id": "subnet-0500cf324cd179ba2",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": false,
+            "outpost_arn": "",
+            "owner_id": "471112634889",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-private-us-east-1a",
+              "Project": "raft-coordinator",
+              "Tier": "private"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-private-us-east-1a",
+              "Project": "raft-coordinator",
+              "Tier": "private"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_subnet",
+      "name": "public",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:subnet/subnet-0bbc36e7608f8d262",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1a",
+            "availability_zone_id": "use1-az6",
+            "cidr_block": "10.2.1.0/24",
+            "customer_owned_ipv4_pool": "",
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "id": "subnet-0bbc36e7608f8d262",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "471112634889",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-public-us-east-1a",
+              "Project": "raft-coordinator",
+              "Tier": "public"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-public-us-east-1a",
+              "Project": "raft-coordinator",
+              "Tier": "public"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-0cc4741094e0c253e"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9",
+          "dependencies": [
+            "module.networking.aws_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.networking",
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:471112634889:vpc/vpc-0cc4741094e0c253e",
+            "assign_generated_ipv6_cidr_block": false,
+            "cidr_block": "10.2.0.0/16",
+            "default_network_acl_id": "acl-0cbe11e8a0fbbff45",
+            "default_route_table_id": "rtb-05e7885d495014f5d",
+            "default_security_group_id": "sg-0466b6fb3fd7fb710",
+            "dhcp_options_id": "dopt-03a408e4844a76d8c",
+            "enable_dns_hostnames": true,
+            "enable_dns_support": true,
+            "enable_network_address_usage_metrics": false,
+            "id": "vpc-0cc4741094e0c253e",
+            "instance_tenancy": "default",
+            "ipv4_ipam_pool_id": null,
+            "ipv4_netmask_length": null,
+            "ipv6_association_id": "",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_network_border_group": "",
+            "ipv6_ipam_pool_id": "",
+            "ipv6_netmask_length": 0,
+            "main_route_table_id": "rtb-05e7885d495014f5d",
+            "owner_id": "471112634889",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-vpc",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-vpc",
+              "Project": "raft-coordinator"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "471112634889",
+            "arn": "arn:aws:sts::471112634889:assumed-role/voclabs/user4718266=liu.shur@northeastern.edu",
+            "id": "471112634889",
+            "user_id": "AROAW3MEAKIEZ2YXRONJZ:user4718266=liu.shur@northeastern.edu"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_dynamodb_table",
+      "name": "peers",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:dynamodb:us-east-1:471112634889:table/raft-coordinator-experiment-peers",
+            "attribute": [
+              {
+                "name": "node_id",
+                "type": "S"
+              }
+            ],
+            "billing_mode": "PAY_PER_REQUEST",
+            "deletion_protection_enabled": false,
+            "global_secondary_index": [],
+            "hash_key": "node_id",
+            "id": "raft-coordinator-experiment-peers",
+            "import_table": [],
+            "local_secondary_index": [],
+            "name": "raft-coordinator-experiment-peers",
+            "on_demand_throughput": [],
+            "point_in_time_recovery": [
+              {
+                "enabled": false,
+                "recovery_period_in_days": 0
+              }
+            ],
+            "range_key": null,
+            "read_capacity": 0,
+            "replica": [],
+            "restore_date_time": null,
+            "restore_source_name": null,
+            "restore_source_table_arn": null,
+            "restore_to_latest_time": null,
+            "server_side_encryption": [],
+            "stream_arn": "",
+            "stream_enabled": false,
+            "stream_label": "",
+            "stream_view_type": "",
+            "table_class": "STANDARD",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-peers",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-peers",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "ttl": [
+              {
+                "attribute_name": "expires_at",
+                "enabled": true
+              }
+            ],
+            "write_capacity": 0
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjozNjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_dynamodb_table",
+      "name": "raft_state",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:dynamodb:us-east-1:471112634889:table/raft-coordinator-experiment-raft-state",
+            "attribute": [
+              {
+                "name": "node_id",
+                "type": "S"
+              }
+            ],
+            "billing_mode": "PAY_PER_REQUEST",
+            "deletion_protection_enabled": false,
+            "global_secondary_index": [],
+            "hash_key": "node_id",
+            "id": "raft-coordinator-experiment-raft-state",
+            "import_table": [],
+            "local_secondary_index": [],
+            "name": "raft-coordinator-experiment-raft-state",
+            "on_demand_throughput": [],
+            "point_in_time_recovery": [
+              {
+                "enabled": true,
+                "recovery_period_in_days": 35
+              }
+            ],
+            "range_key": null,
+            "read_capacity": 0,
+            "replica": [],
+            "restore_date_time": null,
+            "restore_source_name": null,
+            "restore_source_table_arn": null,
+            "restore_to_latest_time": null,
+            "server_side_encryption": [],
+            "stream_arn": "",
+            "stream_enabled": false,
+            "stream_label": "",
+            "stream_view_type": "",
+            "table_class": "STANDARD",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-raft-state",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-raft-state",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "ttl": [
+              {
+                "attribute_name": "",
+                "enabled": false
+              }
+            ],
+            "write_capacity": 0
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjozNjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_dynamodb_table",
+      "name": "tasks",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:dynamodb:us-east-1:471112634889:table/raft-coordinator-experiment-tasks",
+            "attribute": [
+              {
+                "name": "created_at",
+                "type": "S"
+              },
+              {
+                "name": "status",
+                "type": "S"
+              },
+              {
+                "name": "task_id",
+                "type": "S"
+              }
+            ],
+            "billing_mode": "PAY_PER_REQUEST",
+            "deletion_protection_enabled": false,
+            "global_secondary_index": [
+              {
+                "hash_key": "status",
+                "name": "status-created-index",
+                "non_key_attributes": [],
+                "on_demand_throughput": [],
+                "projection_type": "ALL",
+                "range_key": "created_at",
+                "read_capacity": 0,
+                "write_capacity": 0
+              }
+            ],
+            "hash_key": "task_id",
+            "id": "raft-coordinator-experiment-tasks",
+            "import_table": [],
+            "local_secondary_index": [],
+            "name": "raft-coordinator-experiment-tasks",
+            "on_demand_throughput": [],
+            "point_in_time_recovery": [
+              {
+                "enabled": true,
+                "recovery_period_in_days": 35
+              }
+            ],
+            "range_key": null,
+            "read_capacity": 0,
+            "replica": [],
+            "restore_date_time": null,
+            "restore_source_name": null,
+            "restore_source_table_arn": null,
+            "restore_to_latest_time": null,
+            "server_side_encryption": [],
+            "stream_arn": "",
+            "stream_enabled": false,
+            "stream_label": "",
+            "stream_view_type": "",
+            "table_class": "STANDARD",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-tasks",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-tasks",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "ttl": [
+              {
+                "attribute_name": "",
+                "enabled": false
+              }
+            ],
+            "write_capacity": 0
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjozNjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "coordinator",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:471112634889:repository/raft-coordinator-experiment-coordinator",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": true,
+            "id": "raft-coordinator-experiment-coordinator",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "raft-coordinator-experiment-coordinator",
+            "registry_id": "471112634889",
+            "repository_url": "471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator-experiment-coordinator",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-coordinator",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "ingest",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:471112634889:repository/raft-coordinator-experiment-ingest",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": true,
+            "id": "raft-coordinator-experiment-ingest",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "raft-coordinator-experiment-ingest",
+            "registry_id": "471112634889",
+            "repository_url": "471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator-experiment-ingest",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-ingest",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "observer",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:471112634889:repository/raft-coordinator-experiment-observer",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": true,
+            "id": "raft-coordinator-experiment-observer",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "raft-coordinator-experiment-observer",
+            "registry_id": "471112634889",
+            "repository_url": "471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator-experiment-observer",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-observer",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "worker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:471112634889:repository/raft-coordinator-experiment-worker",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": true,
+            "id": "raft-coordinator-experiment-worker",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "raft-coordinator-experiment-worker",
+            "registry_id": "471112634889",
+            "repository_url": "471112634889.dkr.ecr.us-east-1.amazonaws.com/raft-coordinator-experiment-worker",
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-worker",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "raft_snapshots",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acceleration_status": "",
+            "acl": null,
+            "arn": "arn:aws:s3:::raft-coordinator-experiment-raft-snapshots-471112634889",
+            "bucket": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "bucket_domain_name": "raft-coordinator-experiment-raft-snapshots-471112634889.s3.amazonaws.com",
+            "bucket_prefix": "",
+            "bucket_regional_domain_name": "raft-coordinator-experiment-raft-snapshots-471112634889.s3.us-east-1.amazonaws.com",
+            "cors_rule": [],
+            "force_destroy": false,
+            "grant": [
+              {
+                "id": "f5e80d8fee6b0b4e3b71e82dd9f148986c14a0f51c52427074f196dc3e7faedb",
+                "permissions": [
+                  "FULL_CONTROL"
+                ],
+                "type": "CanonicalUser",
+                "uri": ""
+              }
+            ],
+            "hosted_zone_id": "Z3AQBSTGFYJSTF",
+            "id": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "lifecycle_rule": [
+              {
+                "abort_incomplete_multipart_upload_days": 0,
+                "enabled": true,
+                "expiration": [
+                  {
+                    "date": "",
+                    "days": 7,
+                    "expired_object_delete_marker": false
+                  }
+                ],
+                "id": "expire-old-snapshots",
+                "noncurrent_version_expiration": [],
+                "noncurrent_version_transition": [],
+                "prefix": "",
+                "tags": {},
+                "transition": []
+              }
+            ],
+            "logging": [],
+            "object_lock_configuration": [],
+            "object_lock_enabled": false,
+            "policy": "",
+            "region": "us-east-1",
+            "replication_configuration": [],
+            "request_payer": "BucketOwner",
+            "server_side_encryption_configuration": [
+              {
+                "rule": [
+                  {
+                    "apply_server_side_encryption_by_default": [
+                      {
+                        "kms_master_key_id": "",
+                        "sse_algorithm": "AES256"
+                      }
+                    ],
+                    "bucket_key_enabled": false
+                  }
+                ]
+              }
+            ],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-raft-snapshots",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-raft-snapshots",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": true,
+                "mfa_delete": false
+              }
+            ],
+            "website": [],
+            "website_domain": null,
+            "website_endpoint": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "task_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acceleration_status": "",
+            "acl": null,
+            "arn": "arn:aws:s3:::raft-coordinator-experiment-task-data-471112634889",
+            "bucket": "raft-coordinator-experiment-task-data-471112634889",
+            "bucket_domain_name": "raft-coordinator-experiment-task-data-471112634889.s3.amazonaws.com",
+            "bucket_prefix": "",
+            "bucket_regional_domain_name": "raft-coordinator-experiment-task-data-471112634889.s3.us-east-1.amazonaws.com",
+            "cors_rule": [],
+            "force_destroy": false,
+            "grant": [
+              {
+                "id": "f5e80d8fee6b0b4e3b71e82dd9f148986c14a0f51c52427074f196dc3e7faedb",
+                "permissions": [
+                  "FULL_CONTROL"
+                ],
+                "type": "CanonicalUser",
+                "uri": ""
+              }
+            ],
+            "hosted_zone_id": "Z3AQBSTGFYJSTF",
+            "id": "raft-coordinator-experiment-task-data-471112634889",
+            "lifecycle_rule": [
+              {
+                "abort_incomplete_multipart_upload_days": 0,
+                "enabled": true,
+                "expiration": [
+                  {
+                    "date": "",
+                    "days": 1,
+                    "expired_object_delete_marker": false
+                  }
+                ],
+                "id": "expire-task-data",
+                "noncurrent_version_expiration": [],
+                "noncurrent_version_transition": [],
+                "prefix": "",
+                "tags": {},
+                "transition": []
+              }
+            ],
+            "logging": [],
+            "object_lock_configuration": [],
+            "object_lock_enabled": false,
+            "policy": "",
+            "region": "us-east-1",
+            "replication_configuration": [],
+            "request_payer": "BucketOwner",
+            "server_side_encryption_configuration": [
+              {
+                "rule": [
+                  {
+                    "apply_server_side_encryption_by_default": [
+                      {
+                        "kms_master_key_id": "",
+                        "sse_algorithm": "AES256"
+                      }
+                    ],
+                    "bucket_key_enabled": false
+                  }
+                ]
+              }
+            ],
+            "tags": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-task-data",
+              "Project": "raft-coordinator"
+            },
+            "tags_all": {
+              "Environment": "experiment",
+              "ManagedBy": "terraform",
+              "Name": "raft-coordinator-experiment-task-data",
+              "Project": "raft-coordinator"
+            },
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": true,
+                "mfa_delete": false
+              }
+            ],
+            "website": [],
+            "website_domain": null,
+            "website_endpoint": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_lifecycle_configuration",
+      "name": "raft_snapshots",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "bucket": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "expected_bucket_owner": "",
+            "id": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "rule": [
+              {
+                "abort_incomplete_multipart_upload": [],
+                "expiration": [
+                  {
+                    "date": null,
+                    "days": 7,
+                    "expired_object_delete_marker": false
+                  }
+                ],
+                "filter": [
+                  {
+                    "and": [],
+                    "object_size_greater_than": null,
+                    "object_size_less_than": null,
+                    "prefix": "",
+                    "tag": []
+                  }
+                ],
+                "id": "expire-old-snapshots",
+                "noncurrent_version_expiration": [],
+                "noncurrent_version_transition": [],
+                "prefix": "",
+                "status": "Enabled",
+                "transition": []
+              }
+            ],
+            "timeouts": null,
+            "transition_default_minimum_object_size": "all_storage_classes_128K"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "dependencies": [
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_lifecycle_configuration",
+      "name": "task_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "bucket": "raft-coordinator-experiment-task-data-471112634889",
+            "expected_bucket_owner": "",
+            "id": "raft-coordinator-experiment-task-data-471112634889",
+            "rule": [
+              {
+                "abort_incomplete_multipart_upload": [],
+                "expiration": [
+                  {
+                    "date": null,
+                    "days": 1,
+                    "expired_object_delete_marker": false
+                  }
+                ],
+                "filter": [
+                  {
+                    "and": [],
+                    "object_size_greater_than": null,
+                    "object_size_less_than": null,
+                    "prefix": "",
+                    "tag": []
+                  }
+                ],
+                "id": "expire-task-data",
+                "noncurrent_version_expiration": [],
+                "noncurrent_version_transition": [],
+                "prefix": "",
+                "status": "Enabled",
+                "transition": []
+              }
+            ],
+            "timeouts": null,
+            "transition_default_minimum_object_size": "all_storage_classes_128K"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "dependencies": [
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "raft_snapshots",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "block_public_acls": true,
+            "block_public_policy": true,
+            "bucket": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "id": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "ignore_public_acls": true,
+            "restrict_public_buckets": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_public_access_block",
+      "name": "task_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "block_public_acls": true,
+            "block_public_policy": true,
+            "bucket": "raft-coordinator-experiment-task-data-471112634889",
+            "id": "raft-coordinator-experiment-task-data-471112634889",
+            "ignore_public_acls": true,
+            "restrict_public_buckets": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_versioning",
+      "name": "raft_snapshots",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "expected_bucket_owner": "",
+            "id": "raft-coordinator-experiment-raft-snapshots-471112634889",
+            "mfa": null,
+            "versioning_configuration": [
+              {
+                "mfa_delete": "",
+                "status": "Enabled"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.storage.aws_s3_bucket.raft_snapshots",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.storage",
+      "mode": "managed",
+      "type": "aws_s3_bucket_versioning",
+      "name": "task_data",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "bucket": "raft-coordinator-experiment-task-data-471112634889",
+            "expected_bucket_owner": "",
+            "id": "raft-coordinator-experiment-task-data-471112634889",
+            "mfa": null,
+            "versioning_configuration": [
+              {
+                "mfa_delete": "",
+                "status": "Enabled"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.storage.aws_s3_bucket.task_data",
+            "module.storage.data.aws_caller_identity.current"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": [
+    {
+      "object_kind": "var",
+      "config_addr": "var.coordinator_count",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "var.coordinator_count",
+          "status": "pass"
+        }
+      ]
+    }
+  ]
+}

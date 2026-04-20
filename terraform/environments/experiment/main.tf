@@ -103,6 +103,7 @@ module "ecs_cluster" {
   raft_snapshots_bucket = module.storage.raft_snapshots_bucket
 
   private_subnet_ids            = module.networking.private_subnet_ids
+  public_subnet_ids             = module.networking.public_subnet_ids
   coordinator_security_group_id = module.networking.coordinator_security_group_id
   worker_security_group_id      = module.networking.worker_security_group_id
   ingest_security_group_id      = module.networking.ingest_security_group_id

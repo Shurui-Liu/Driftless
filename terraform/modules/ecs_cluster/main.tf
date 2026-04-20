@@ -297,9 +297,9 @@ resource "aws_ecs_service" "ingest" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
+    subnets          = var.public_subnet_ids
     security_groups  = [var.ingest_security_group_id]
-    assign_public_ip = false
+    assign_public_ip = true
   }
 
   tags = merge(local.common_tags, { Name = "${local.prefix}-ingest" })
