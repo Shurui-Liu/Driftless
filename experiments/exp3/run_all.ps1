@@ -113,16 +113,17 @@ if (-not (Test-Path $HistoryPath)) {
 
 Write-Host ''
 Write-Host '[exp3] Running analysis (dup scan + divergence + Porcupine)...' -ForegroundColor Yellow
-$LincheckAbs = (Resolve-Path $LINCHECK).Path
+$LincheckAbs  = (Resolve-Path $LINCHECK).Path
+$HistoryAbs   = (Resolve-Path $HistoryPath).Path
 Push-Location chaos-bench
-python exp3.py analyze $HistoryPath --lincheck $LincheckAbs
+python exp3.py analyze $HistoryAbs --lincheck $LincheckAbs
 $AnalyzeExitCode = $LASTEXITCODE
 Pop-Location
 if ($AnalyzeExitCode -ne 0) { Write-Warning ('exp3 analyze exited with code ' + $AnalyzeExitCode) }
 
 # ── Step 6: Parse and display summary ────────────────────────────────────────
 
-$RunDir      = Split-Path $HistoryPath
+$RunDir      = Split-Path $HistoryAbs
 $SummaryPath = $RunDir + '\exp3_summary.json'
 
 if (-not (Test-Path $SummaryPath)) {

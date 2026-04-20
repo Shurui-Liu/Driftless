@@ -11,7 +11,9 @@
       "Bash(terraform *)",
       "Bash(powershell -Command '& { $null = [System.Management.Automation.Language.Parser]::ParseFile\\('\\\\''E:/000 Northeastern/CS6650/week 9_project/Driftless/experiments/exp2/run.ps1'\\\\'', [ref]$null, [ref]$errs\\); if \\($errs\\) { $errs } else { '\\\\''exp2/run.ps1: OK'\\\\'' } }')",
       "Bash(powershell -Command '& { $null = [System.Management.Automation.Language.Parser]::ParseFile\\('\\\\''E:/000 Northeastern/CS6650/week 9_project/Driftless/experiments/exp3/run.ps1'\\\\'', [ref]$null, [ref]$errs\\); if \\($errs\\) { $errs } else { '\\\\''exp3/run.ps1: OK'\\\\'' } }')",
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)"
     ]
   }
 }
