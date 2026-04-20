@@ -8,6 +8,7 @@
 #   .\experiments\exp2\run.ps1
 
 param(
+    [string]$AwsRegion        = 'us-east-1',
     [string]$ClusterSize      = $env:CLUSTER_SIZE,
     [string]$IngestUrl        = $env:INGEST_URL,
     [string]$TasksTable       = $env:TASKS_TABLE,
@@ -70,8 +71,10 @@ foreach ($Rate in $Rates) {
     Write-Host ('  [1/3] warm-up (' + $LabelWarmup + ', not measured)...')
     & $LOADGEN -rate $Rate -duration $DurWarmup -url $IngestUrl | Out-Null
 
+    $MeasureStart = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     Write-Host ('  [2/3] measuring (' + $LabelMeasure + ')...')
     $LoadgenOut = & $LOADGEN -rate $Rate -duration $DurMeasure -url $IngestUrl
+    $MeasureEnd = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     Write-Host ('        ' + $LoadgenOut)
 
     $Submitted  = if ($LoadgenOut -match 'submitted=(\d+)')      { $Matches[1] } else { '0' }
@@ -84,8 +87,11 @@ foreach ($Rate in $Rates) {
     Write-Host '  collecting metrics...'
     $CollectorArgs = @(
         'experiments\metrics-collector\collect.py',
+        '--region',      $AwsRegion,
         '--table',       $TasksTable,
         '--label',       $Label,
+        '--since',       $MeasureStart,
+        '--until',       $MeasureEnd,
         '--submitted',   $Submitted,
         '--failed',      $Failed,
         '--actual-rate', $ActualRate,

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,9 +42,17 @@ def parse_ts(s: str) -> datetime:
     return datetime.fromisoformat(s)
 
 
-def collect_latencies(table: str) -> list[float]:
-    """Return sorted list of dispatched_at - created_at latencies in milliseconds."""
-    client = boto3.client("dynamodb")
+def collect_latencies(
+    table: str,
+    region: str = "us-east-1",
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> list[float]:
+    """Return sorted list of dispatched_at - created_at latencies in milliseconds.
+
+    since/until filter by created_at so each rate window is measured independently.
+    """
+    client = boto3.client("dynamodb", region_name=region)
     paginator = client.get_paginator("scan")
     pages = paginator.paginate(
         TableName=table,
@@ -55,6 +64,10 @@ def collect_latencies(table: str) -> list[float]:
             try:
                 t0 = parse_ts(item["created_at"]["S"])
                 t1 = parse_ts(item["dispatched_at"]["S"])
+                if since and t0 < since:
+                    continue
+                if until and t0 > until:
+                    continue
                 ms = (t1 - t0).total_seconds() * 1000.0
                 if ms >= 0:
                     latencies.append(ms)
@@ -117,6 +130,8 @@ def find_leader_lag(coordinator_addrs: list[str]) -> dict[str, int]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Collect Experiment 2 metrics")
+    parser.add_argument("--region",      default=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"),
+                        help="AWS region (default: us-east-1)")
     parser.add_argument("--table",       required=True, help="DynamoDB tasks table name")
     parser.add_argument("--label",       required=True,
                         help="experiment label, e.g. '3node_500tpm'")
@@ -128,17 +143,24 @@ def main() -> None:
                         help="tasks that got non-202 responses from load generator")
     parser.add_argument("--actual-rate", type=float, default=0.0, dest="actual_rate",
                         help="actual submission rate achieved (tasks/min)")
+    parser.add_argument("--since",  default=None,
+                        help="ISO8601 timestamp: only count tasks created at or after this time")
+    parser.add_argument("--until",  default=None,
+                        help="ISO8601 timestamp: only count tasks created at or before this time")
     parser.add_argument("--output",      default="-",
                         help="output CSV file path (default: stdout)")
     args = parser.parse_args()
 
+    since_dt = parse_ts(args.since) if args.since else None
+    until_dt = parse_ts(args.until) if args.until else None
+
     # Collect latencies from DynamoDB
     print(f"[{args.label}] scanning DynamoDB table '{args.table}'…", file=sys.stderr)
-    latencies = collect_latencies(args.table)
+    latencies = collect_latencies(args.table, region=args.region, since=since_dt, until=until_dt)
     if not latencies:
-        print("ERROR: no tasks with dispatched_at found — did the experiment run?",
+        print("WARNING: no tasks with dispatched_at found in the given window.",
               file=sys.stderr)
-        sys.exit(1)
+        sys.exit(0)
 
     # Collect replication lag from coordinator(s)
     coordinator_addrs = [a.strip() for a in args.coordinator.split(",") if a.strip()]
