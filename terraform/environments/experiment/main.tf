@@ -35,6 +35,21 @@ variable "coordinator_image" {
   type        = string
 }
 
+variable "worker_image" {
+  description = "ECR image URI for the worker node"
+  type        = string
+}
+
+variable "ingest_image" {
+  description = "ECR image URI for the task ingest API"
+  type        = string
+}
+
+variable "observer_image" {
+  description = "ECR image URI for the state observer"
+  type        = string
+}
+
 # ── Networking ────────────────────────────────────────────────────────────────
 # Use a separate CIDR range from dev to allow both environments to coexist.
 
@@ -102,6 +117,10 @@ module "ecs_cluster" {
   coordinator_count  = var.coordinator_count
   coordinator_cpu    = 1024   # 1 vCPU
   coordinator_memory = 2048   # 2 GB
+
+  worker_image   = var.worker_image
+  ingest_image   = var.ingest_image
+  observer_image = var.observer_image
 }
 
 # ── Outputs ───────────────────────────────────────────────────────────────────
