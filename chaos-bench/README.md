@@ -46,22 +46,59 @@ python main.py plot histories/run-*/history.jsonl
 
 | Experiment | Command recipe |
 |---|---|
-| **Exp 1 — Leader election** | `bench --rate 300 --duration 120` in background; loop `chaos kill_leader` every 20 s; compute post-fault latency spike from plot |
+| **Exp 1 — Leader election** | `python exp1.py run --duration 180 --rate 300 --kill-period 30` then `python exp1.py analyze <path>` and `python exp1.py dups <path>` |
 | **Exp 2 — Throughput scaling** | `terraform apply -var coordinator_count=3`, run `bench` at rates 100/500/1000, repeat with `=5` |
 | **Exp 3 — Exactly-once** | `bench --rate 500 --duration 1200` (~10k tasks) + periodic `chaos kill_*`; feed `history.jsonl` into Porcupine adapter |
-| **Exp 4 — Snapshot recovery** | `bench --rate 2000 --duration 1500` to fill log, force snapshot, `ecs stop-task` one coordinator cold, measure re-ready time from coordinator log stream |
+| **Exp 4 — Snapshot recovery** | `python exp4.py --duration 1800 --rate 2000 --target-commit 50000` (snapshots on). For contrast: redeploy with `SNAPSHOT_S3_BUCKET=""` and rerun. |
+
+## Experiment 1 — Leader Election Correctness
+
+`exp1.py run` starts three concurrent threads against the live cluster:
+
+1. **Submitter** — drives `--rate` tasks/min for `--duration` seconds (same code path as `bench`).
+2. **Chaos loop** — every `--kill-period` seconds, auto-detects the current leader via the peers DDB table and runs `ecs:StopTask` on it.
+3. **Leader tracker** — scans the peers DDB `is_leader` bit every 150 ms and emits a `leader_observed` event each time the holder changes.
+
+Everything lands in one `history.jsonl`. `exp1.py analyze` computes:
+
+- **Election convergence time** — for each `chaos.kill_leader` event, the delta to the first `leader_observed` with a different node_id. Reports p50/p95/mean/max.
+- **Lost task count** — `submitted − completed − timed_out`.
+
+`exp1.py dups` (backed by `dup_scan.py`) reads every submitted `task_id` out of the history and scans the tasks DDB for items with `receive_count > 1`. The worker increments this atomically on every assignment receipt, so any `> 1` is a duplicate dispatch (Raft-layer double-commit or SQS redelivery).
+
+## Experiment 4 — Snapshot Recovery
+
+`exp4.py` drives a sustained 2000 tasks/min workload and blocks until the leader's `commit_index` crosses `--target-commit` (default 50000). It reads the leader's commit index out of the coordinator's CloudWatch `raft tick` log lines (emitted every 2 s) — works from outside the VPC.
+
+Once the threshold is hit, the script:
+
+1. Verifies a snapshot exists at `s3://<raft-snapshots-bucket>/raft/<follower_node_id>/snapshot.json` via `HeadObject` and records its size.
+2. Runs `ecs:StopTask` on one follower service.
+3. Uses `follower_recovery.FollowerRecoveryObserver` to watch the follower's log stream for:
+   - `coordinator started` → ECS restart-to-ready
+   - `snapshot restored` → recovered via snapshot (absent on full-replay runs)
+   - `raft tick` with `commit_index ≥ target − tolerance` → rejoined quorum
+4. Writes `exp4_summary.json` with both absolute timestamps and millisecond deltas.
+
+For the full-log-replay contrast run, blank `SNAPSHOT_S3_BUCKET` on the coordinator task definition (redeploy), rerun `exp4.py`, and compare `recovery_timeline.catchup_ms` between runs.
 
 ## File layout
 
 ```
 chaos-bench/
-  main.py        CLI entry
-  config.py      env-var driven config
-  submitter.py   S3+DDB+SQS task submission (bypasses private ingest API)
-  bench.py       workload orchestrator
-  chaos.py       ECS-level fault injection
-  recorder.py    JSONL history writer
-  plot.py        summary.json + latency/throughput PNGs
+  main.py              CLI entry (bench/chaos/plot)
+  config.py            env-var driven config
+  submitter.py         S3+DDB+SQS task submission (bypasses private ingest API)
+  bench.py             workload orchestrator
+  chaos.py             ECS-level fault injection
+  leader_detect.py     find current leader via peers DDB
+  leader_tracker.py    thread that emits leader_observed events on change
+  recorder.py          JSONL history writer
+  dup_scan.py          DDB scan for receive_count > 1
+  exp1.py              Experiment 1 — leader election correctness
+  exp4.py              Experiment 4 — snapshot recovery
+  follower_recovery.py CloudWatch-log-driven recovery timeline observer
+  plot.py              summary.json + latency/throughput PNGs
   requirements.txt
 ```
 

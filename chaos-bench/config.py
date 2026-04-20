@@ -20,6 +20,7 @@ class Config:
     tasks_table: str           # DynamoDB task metadata
     peers_table: str           # DynamoDB peer registry
     payload_bucket: str        # S3 bucket for payloads + results
+    snapshot_bucket: str       # S3 bucket for Raft snapshots
     ingest_queue_url: str      # SQS ingest queue
 
     # ECS service names (used by chaos injector)
@@ -51,6 +52,9 @@ class Config:
             peers_table=os.environ.get("PEERS_TABLE", f"{prefix}-peers"),
             payload_bucket=os.environ.get(
                 "PAYLOAD_BUCKET", f"{prefix}-task-data-{account}"
+            ),
+            snapshot_bucket=os.environ.get(
+                "SNAPSHOT_BUCKET", f"{prefix}-raft-snapshots-{account}"
             ),
             ingest_queue_url=os.environ.get(
                 "INGEST_QUEUE_URL",
