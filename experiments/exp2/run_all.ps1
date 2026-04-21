@@ -92,20 +92,8 @@ function Get-IngestPublicIP {
 
 function Clear-RaftSnapshots {
     Write-Host '[snapshots] Deleting S3 Raft snapshots to force term=0 startup...' -ForegroundColor Yellow
-    $keys = (aws s3api list-objects-v2 `
-        --bucket $SnapshotBucket --prefix 'raft/' `
-        --query 'Contents[].Key' --output text --region $AwsRegion 2>$null)
-    if ($keys -and $keys -ne 'None') {
-        foreach ($key in ($keys -split '\s+')) {
-            if ($key) {
-                aws s3 rm "s3://$SnapshotBucket/$key" --region $AwsRegion | Out-Null
-                Write-Host ('  deleted s3://' + $SnapshotBucket + '/' + $key)
-            }
-        }
-        Write-Host '[snapshots] Done.' -ForegroundColor Green
-    } else {
-        Write-Host '[snapshots] No snapshots found (already clean).' -ForegroundColor Green
-    }
+    aws s3 rm "s3://$SnapshotBucket/raft/" --recursive --region $AwsRegion
+    Write-Host '[snapshots] Done.' -ForegroundColor Green
 }
 
 function Clear-DynamoTasks {

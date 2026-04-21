@@ -26,7 +26,8 @@
       "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_100tpm --submitted 199 --failed 0 --actual-rate 99.5 --since 2026-04-20T17:53:30Z --until 2026-04-20T17:55:30Z --output experiments/exp2/results/5node_windowed.csv)",
       "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_500tpm --submitted 998 --failed 0 --actual-rate 499.0 --since 2026-04-20T17:57:30Z --until 2026-04-20T17:59:30Z --output experiments/exp2/results/5node_windowed.csv)",
       "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_1000tpm --submitted 1996 --failed 0 --actual-rate 998.0 --since 2026-04-20T18:01:30Z --until 2026-04-20T18:03:30Z --output experiments/exp2/results/5node_windowed.csv)",
-      "Bash(python experiments/exp2/plot_exp2.py)"
+      "Bash(python experiments/exp2/plot_exp2.py)",
+      "Bash(python experiments/exp2/plot_exp2.py experiments/exp2/results/3node_windowed.csv experiments/exp2/results/5node_20260421_014357.csv)"
     ]
   }
 }
