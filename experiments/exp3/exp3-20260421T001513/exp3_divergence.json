@@ -1,0 +1,9 @@
+{
+  "total_scanned": 500,
+  "stuck_pending": 0,
+  "stuck_assigned": 0,
+  "missing": 0,
+  "stuck_pending_sample": [],
+  "stuck_assigned_sample": [],
+  "missing_sample": []
+}

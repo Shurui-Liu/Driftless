@@ -1,0 +1,7 @@
+{
+  "total_tasks": 500,
+  "total_operations": 9584,
+  "violations": 0,
+  "violating_task_sample": null,
+  "linearizable": true
+}

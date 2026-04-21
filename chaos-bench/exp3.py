@@ -143,21 +143,24 @@ def _kill_leader_loop(
     if stop.wait(period_s):
         return
     while not stop.is_set():
-        info = find_leader(cfg)
-        if info is None:
-            rec.record(op="chaos.skip", fault="kill_leader", reason="no leader detected")
-        else:
-            res = inj.kill_leader(info.ecs_service)
-            if res is None:
-                rec.record(op="chaos.skip", fault="kill_leader", reason="no running task")
+        try:
+            info = find_leader(cfg)
+            if info is None:
+                rec.record(op="chaos.skip", fault="kill_leader", reason="no leader detected")
             else:
-                rec.record(
-                    op="chaos.kill_leader",
-                    service=res.service,
-                    task_arn=res.task_arn,
-                    killed_ns=res.killed_ns,
-                    leader_node_id=info.node_id,
-                )
+                res = inj.kill_leader(info.ecs_service)
+                if res is None:
+                    rec.record(op="chaos.skip", fault="kill_leader", reason="no running task")
+                else:
+                    rec.record(
+                        op="chaos.kill_leader",
+                        service=res.service,
+                        task_arn=res.task_arn,
+                        killed_ns=res.killed_ns,
+                        leader_node_id=info.node_id,
+                    )
+        except Exception as e:
+            rec.record(op="chaos.error", fault="kill_leader", err=str(e))
         if stop.wait(period_s):
             return
 
@@ -172,21 +175,24 @@ def _kill_follower_loop(
     if stop.wait(period_s * 0.7):  # offset so it doesn't fire at same time as leader kill
         return
     while not stop.is_set():
-        info = find_leader(cfg)
-        if info is None:
-            rec.record(op="chaos.skip", fault="kill_follower", reason="no leader detected")
-        else:
-            followers = [s for s in cfg.coordinator_services if s != info.ecs_service]
-            res = inj.kill_follower(followers)
-            if res is None:
-                rec.record(op="chaos.skip", fault="kill_follower", reason="no follower tasks")
+        try:
+            info = find_leader(cfg)
+            if info is None:
+                rec.record(op="chaos.skip", fault="kill_follower", reason="no leader detected")
             else:
-                rec.record(
-                    op="chaos.kill_follower",
-                    service=res.service,
-                    task_arn=res.task_arn,
-                    killed_ns=res.killed_ns,
-                )
+                followers = [s for s in cfg.coordinator_services if s != info.ecs_service]
+                res = inj.kill_follower(followers)
+                if res is None:
+                    rec.record(op="chaos.skip", fault="kill_follower", reason="no follower tasks")
+                else:
+                    rec.record(
+                        op="chaos.kill_follower",
+                        service=res.service,
+                        task_arn=res.task_arn,
+                        killed_ns=res.killed_ns,
+                    )
+        except Exception as e:
+            rec.record(op="chaos.error", fault="kill_follower", err=str(e))
         if stop.wait(period_s):
             return
 
@@ -201,8 +207,11 @@ def _sqs_redeliver_loop(
     if stop.wait(period_s * 0.4):  # different offset from the kill loops
         return
     while not stop.is_set():
-        n = inj.inject_sqs_redelivery(cfg.ingest_queue_url, count=5)
-        rec.record(op="chaos.sqs_redeliver", redelivered=n, queue=cfg.ingest_queue_url)
+        try:
+            n = inj.inject_sqs_redelivery(cfg.ingest_queue_url, count=5)
+            rec.record(op="chaos.sqs_redeliver", redelivered=n, queue=cfg.ingest_queue_url)
+        except Exception as e:
+            rec.record(op="chaos.error", fault="sqs_redeliver", err=str(e))
         if stop.wait(period_s):
             return
 

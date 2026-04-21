@@ -1,14 +1,19 @@
 # experiments/exp2/run_all.ps1  –  Experiment 2 full orchestration
 #
-# Collects 3-node results already in DynamoDB, then deploys a 5-node cluster,
-# runs the same load sweep, and prints a side-by-side comparison.
+# Full clean re-run (recommended):
+#   .\experiments\exp2\run_all.ps1 -Clean
 #
-# Run from the repo root:
-#   .\experiments\exp2\run_all.ps1
+# This will:
+#   1. Deploy a fresh 3-node cluster via Terraform
+#   2. Purge the DynamoDB tasks table and SQS ingest queue
+#   3. Delete S3 Raft snapshots so nodes start at term=0 (prevents election storm)
+#   4. Run the 3-node load sweep (100 / 500 / 1000 tpm)
+#   5. Delete S3 snapshots again, then deploy a 5-node cluster
+#   6. Run the 5-node load sweep
+#   7. Collect per-window latency metrics and print a side-by-side comparison
 #
 # Resume flags (skip steps already done):
-#   .\experiments\exp2\run_all.ps1 -Skip3NodeCollect
-#   .\experiments\exp2\run_all.ps1 -Skip3NodeCollect -Skip5NodeDeploy -IngestUrl http://<ip>:8080/tasks
+#   .\experiments\exp2\run_all.ps1 -Skip3NodeDeploy -Skip3NodeSweep -Skip5NodeDeploy -IngestUrl http://<ip>:8080/tasks
 
 param(
     [string]$AwsRegion       = 'us-east-1',
@@ -16,29 +21,29 @@ param(
     [string]$IngestService   = 'raft-coordinator-experiment-ingest',
     [string]$TasksTable      = 'raft-coordinator-experiment-tasks',
     [string]$PeersTable      = 'raft-coordinator-experiment-peers',
+    [string]$SnapshotBucket  = 'raft-coordinator-experiment-raft-snapshots-471112634889',
+    [string]$IngestQueueUrl  = 'https://sqs.us-east-1.amazonaws.com/471112634889/raft-coordinator-experiment-ingest',
     [int[]] $Rates           = @(100, 500, 1000),
     [int]   $WarmupS         = 30,
     [int]   $MeasureS        = 120,
     [int]   $CooldownS       = 90,
 
-    # Already-completed 3-node loadgen numbers (from the run log)
-    [int]   $N100Submitted   = 199,   [float]$N100Rate   = 99.5,
-    [int]   $N500Submitted   = 998,   [float]$N500Rate   = 499.0,
-    [int]   $N1000Submitted  = 1996,  [float]$N1000Rate  = 998.0,
-
-    # Skip flags
-    [switch]$Skip3NodeCollect,
-    [switch]$Skip5NodeDeploy,
-    [string]$IngestUrl = ''          # supply when skipping deploy
+    # Skip / resume flags
+    [switch]$Clean,             # full clean re-run (purge table + queue + snapshots)
+    [switch]$Skip3NodeDeploy,   # skip Terraform deploy of 3-node cluster
+    [switch]$Skip3NodeSweep,    # skip 3-node load sweep (use existing DynamoDB data)
+    [switch]$Skip5NodeDeploy,   # skip Terraform deploy of 5-node cluster
+    [string]$IngestUrl = ''     # supply when skipping deploy steps
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$LOADGEN   = '.\bin\loadgen.exe'
-$COLLECTOR = 'experiments\metrics-collector\collect.py'
-$TF_DIR    = 'terraform\environments\experiment'
-$OUT_3N    = 'experiments\exp2\results\3node_clean.csv'
+$LOADGEN    = '.\bin\loadgen.exe'
+$COLLECTOR  = 'experiments\metrics-collector\collect.py'
+$TF_DIR     = 'terraform\environments\experiment'
+$Timestamp  = Get-Date -Format 'yyyyMMdd_HHmmss'
+$OUT_3N     = 'experiments\exp2\results\3node_' + $Timestamp + '.csv'
 $DurWarmup  = $WarmupS.ToString()  + 's'
 $DurMeasure = $MeasureS.ToString() + 's'
 
@@ -85,22 +90,72 @@ function Get-IngestPublicIP {
     return $ip
 }
 
+function Clear-RaftSnapshots {
+    Write-Host '[snapshots] Deleting S3 Raft snapshots to force term=0 startup...' -ForegroundColor Yellow
+    $keys = (aws s3api list-objects-v2 `
+        --bucket $SnapshotBucket --prefix 'raft/' `
+        --query 'Contents[].Key' --output text --region $AwsRegion 2>$null)
+    if ($keys -and $keys -ne 'None') {
+        foreach ($key in ($keys -split '\s+')) {
+            if ($key) {
+                aws s3 rm "s3://$SnapshotBucket/$key" --region $AwsRegion | Out-Null
+                Write-Host ('  deleted s3://' + $SnapshotBucket + '/' + $key)
+            }
+        }
+        Write-Host '[snapshots] Done.' -ForegroundColor Green
+    } else {
+        Write-Host '[snapshots] No snapshots found (already clean).' -ForegroundColor Green
+    }
+}
+
+function Clear-DynamoTasks {
+    Write-Host '[dynamo] Deleting all items from tasks table (via Python boto3)...' -ForegroundColor Yellow
+    $deleted = python -c @"
+import boto3, sys
+region = '$AwsRegion'
+table_name = '$TasksTable'
+dynamo = boto3.resource('dynamodb', region_name=region)
+table = dynamo.Table(table_name)
+scan = table.scan(ProjectionExpression='task_id')
+count = 0
+with table.batch_writer() as batch:
+    while True:
+        for item in scan['Items']:
+            batch.delete_item(Key={'task_id': item['task_id']})
+            count += 1
+        if 'LastEvaluatedKey' not in scan:
+            break
+        scan = table.scan(ProjectionExpression='task_id',
+                          ExclusiveStartKey=scan['LastEvaluatedKey'])
+print(count)
+"@
+    Write-Host ('[dynamo] Deleted ' + $deleted.Trim() + ' tasks.') -ForegroundColor Green
+}
+
+function Clear-SqsQueue {
+    Write-Host '[sqs] Purging ingest queue...' -ForegroundColor Yellow
+    aws sqs purge-queue --queue-url $IngestQueueUrl --region $AwsRegion | Out-Null
+    Write-Host '[sqs] Purge initiated (takes up to 60s to complete).' -ForegroundColor Green
+    Start-Sleep -Seconds 60
+}
+
 function Wait-RaftLeader {
     param([int]$TimeoutS = 180)
     Write-Host '[wait] Polling DynamoDB peers table for an elected leader...' -ForegroundColor Yellow
     $deadline = (Get-Date).AddSeconds($TimeoutS)
     while ((Get-Date) -lt $deadline) {
         try {
-            $count = (aws dynamodb scan `
-                --table-name    $PeersTable `
-                --region        $AwsRegion `
-                --filter-expression  'is_leader = :t' `
-                --expression-attribute-values  '{\":t\":{\"BOOL\":true}}' `
-                --select COUNT `
-                --query  'Count' `
-                --output text 2>$null)
-            if ($count -and [int]$count -ge 1) {
-                Write-Host '[wait] Leader found.' -ForegroundColor Green
+            # Scan without a filter-expression to avoid PowerShell 5.1 JSON
+            # quote-stripping when passing --expression-attribute-values to
+            # native executables.  Filter in PowerShell instead.
+            $items = (aws dynamodb scan `
+                --table-name $PeersTable `
+                --region     $AwsRegion `
+                --output     json 2>$null | ConvertFrom-Json).Items
+            $leaders = $items | Where-Object { $_.is_leader.BOOL -eq $true }
+            if ($leaders) {
+                $leaderId = ($leaders | Select-Object -First 1).node_id.S
+                Write-Host ('[wait] Leader found: ' + $leaderId) -ForegroundColor Green
                 return
             }
         } catch { }
@@ -162,9 +217,10 @@ function Invoke-RateRun {
     Write-Host ('  [3/3] draining queues (' + $CooldownS + 's)...')
     Start-Sleep -Seconds $CooldownS
 
+    Write-Host ('  [window] since=' + $Since + '  until=' + $Until)
     Write-Host '  collecting metrics...'
     Invoke-Collect -Label $Label -Submitted $submitted -Failed $failed `
-        -ActualRate $actualRate -OutputFile $OutputFile
+        -ActualRate $actualRate -OutputFile $OutputFile -Since $Since -Until $Until
 }
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
@@ -173,49 +229,93 @@ Ensure-LoadGen
 Ensure-PipDeps
 New-Item -ItemType Directory -Force -Path 'experiments\exp2\results' | Out-Null
 
-# ── Step 1: Collect 3-node results (all current DynamoDB data is 3-node) ──────
+# ── Step 1: Deploy 3-node cluster ─────────────────────────────────────────────
 
-if (-not $Skip3NodeCollect) {
+if (-not $Skip3NodeDeploy) {
     Write-Host ''
     Write-Host '================================================================' -ForegroundColor Cyan
-    Write-Host ' Step 1: Collecting 3-node results from DynamoDB'               -ForegroundColor Cyan
+    Write-Host ' Step 1: Deploying 3-node coordinator cluster (Terraform)'     -ForegroundColor Cyan
     Write-Host '================================================================' -ForegroundColor Cyan
 
-    Invoke-Collect -Label '3node_100tpm'  -Submitted $N100Submitted  -ActualRate $N100Rate  -OutputFile $OUT_3N
-    Invoke-Collect -Label '3node_500tpm'  -Submitted $N500Submitted  -ActualRate $N500Rate  -OutputFile $OUT_3N
-    Invoke-Collect -Label '3node_1000tpm' -Submitted $N1000Submitted -ActualRate $N1000Rate -OutputFile $OUT_3N
+    if ($Clean) { Clear-RaftSnapshots }
 
-    Write-Host ('[3-node] Saved to ' + $OUT_3N) -ForegroundColor Green
+    Push-Location $TF_DIR
+    terraform apply -var-file 3node.tfvars -auto-approve
+    if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'terraform apply failed' }
+    Pop-Location
+
+    Write-Host '[deploy] Waiting 60s for ECS tasks to start...' -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
+    Wait-RaftLeader -TimeoutS 180
 } else {
-    Write-Host '[skip] 3-node collect.' -ForegroundColor DarkGray
+    Write-Host '[skip] 3-node deploy.' -ForegroundColor DarkGray
 }
 
-# ── Step 2: Record split point before any 5-node tasks land ──────────────────
+# ── Step 2: Purge stale data (clean run only) ─────────────────────────────────
 
-$FiveNodeStart = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-Write-Host ('[5-node] DynamoDB split boundary: ' + $FiveNodeStart) -ForegroundColor Cyan
+if ($Clean) {
+    Write-Host ''
+    Write-Host '================================================================' -ForegroundColor Cyan
+    Write-Host ' Step 2: Purging DynamoDB tasks table and SQS queue'           -ForegroundColor Cyan
+    Write-Host '================================================================' -ForegroundColor Cyan
+    Clear-DynamoTasks
+    Clear-SqsQueue
+} else {
+    Write-Host '[skip] Data purge (pass -Clean to enable).' -ForegroundColor DarkGray
+}
 
-# ── Step 3: Redeploy to 5-node ────────────────────────────────────────────────
+# ── Step 3: Run 3-node load sweep ─────────────────────────────────────────────
+
+if (-not $Skip3NodeSweep) {
+    if (-not $IngestUrl) {
+        $ip = Get-IngestPublicIP
+        $IngestUrl = 'http://' + $ip + ':8080/tasks'
+    }
+    Write-Host ('[3-node] Ingest URL: ' + $IngestUrl) -ForegroundColor Green
+
+    Write-Host ''
+    Write-Host '================================================================' -ForegroundColor Cyan
+    Write-Host ' Step 3: Running 3-node load sweep'                            -ForegroundColor Cyan
+    Write-Host (' Rates : ' + ($Rates -join ', ') + ' tasks/min')             -ForegroundColor Cyan
+    Write-Host (' Output: ' + $OUT_3N)                                         -ForegroundColor Cyan
+    Write-Host '================================================================' -ForegroundColor Cyan
+
+    foreach ($Rate in $Rates) {
+        Invoke-RateRun -Rate $Rate -Url $IngestUrl -Prefix '3node' -OutputFile $OUT_3N
+    }
+    Write-Host ('[3-node] Results saved to ' + $OUT_3N) -ForegroundColor Green
+} else {
+    Write-Host '[skip] 3-node sweep.' -ForegroundColor DarkGray
+}
+
+# ── Step 4: Deploy 5-node cluster ─────────────────────────────────────────────
+# IMPORTANT: delete S3 snapshots before redeploying so all nodes start at
+# term=0.  Without this, nodes that persisted high-term snapshots will cause
+# a perpetual split-vote election storm on the new cluster.
 
 if (-not $Skip5NodeDeploy) {
     Write-Host ''
     Write-Host '================================================================' -ForegroundColor Cyan
-    Write-Host ' Step 2: Deploying 5-node coordinator cluster (Terraform)'      -ForegroundColor Cyan
+    Write-Host ' Step 4: Deploying 5-node coordinator cluster (Terraform)'     -ForegroundColor Cyan
     Write-Host '================================================================' -ForegroundColor Cyan
+
+    Clear-RaftSnapshots   # always purge before 5-node deploy
 
     Push-Location $TF_DIR
     terraform apply -var-file 5node.tfvars -auto-approve
     if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'terraform apply failed' }
     Pop-Location
 
-    Write-Host '[deploy] Waiting 45s for ECS tasks to start...' -ForegroundColor Yellow
-    Start-Sleep -Seconds 45
+    Write-Host '[deploy] Waiting 60s for ECS tasks to start...' -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
     Wait-RaftLeader -TimeoutS 180
 } else {
     Write-Host '[skip] 5-node deploy.' -ForegroundColor DarkGray
 }
 
-# ── Step 4: Resolve ingest URL ────────────────────────────────────────────────
+# ── Step 5: Run 5-node load sweep ─────────────────────────────────────────────
+
+$OUT_5N = 'experiments\exp2\results\5node_' + $Timestamp + '.csv'
 
 if (-not $IngestUrl) {
     $ip = Get-IngestPublicIP
@@ -223,14 +323,9 @@ if (-not $IngestUrl) {
 }
 Write-Host ('[5-node] Ingest URL: ' + $IngestUrl) -ForegroundColor Green
 
-# ── Step 5: Run 5-node load sweep ────────────────────────────────────────────
-
-$Timestamp5N = Get-Date -Format 'yyyyMMdd_HHmmss'
-$OUT_5N      = 'experiments\exp2\results\5node_' + $Timestamp5N + '.csv'
-
 Write-Host ''
 Write-Host '================================================================' -ForegroundColor Cyan
-Write-Host ' Step 3: Running 5-node load sweep'                              -ForegroundColor Cyan
+Write-Host ' Step 5: Running 5-node load sweep'                              -ForegroundColor Cyan
 Write-Host (' Rates : ' + ($Rates -join ', ') + ' tasks/min')               -ForegroundColor Cyan
 Write-Host (' Output: ' + $OUT_5N)                                           -ForegroundColor Cyan
 Write-Host '================================================================' -ForegroundColor Cyan
@@ -252,7 +347,10 @@ Write-Host ''
 Write-Host ' 5-node:' -ForegroundColor Cyan
 if (Test-Path $OUT_5N) { Get-Content $OUT_5N }
 Write-Host ''
-Write-Host (' Files saved:')
+Write-Host ' Files saved:'
 Write-Host ('   ' + $OUT_3N)
 Write-Host ('   ' + $OUT_5N)
+Write-Host ''
+Write-Host ' Generate graphs:'
+Write-Host '   python experiments/exp2/plot_exp2.py'
 Write-Host '================================================================' -ForegroundColor Green

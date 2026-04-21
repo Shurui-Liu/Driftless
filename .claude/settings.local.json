@@ -13,7 +13,20 @@
       "Bash(powershell -Command '& { $null = [System.Management.Automation.Language.Parser]::ParseFile\\('\\\\''E:/000 Northeastern/CS6650/week 9_project/Driftless/experiments/exp3/run.ps1'\\\\'', [ref]$null, [ref]$errs\\); if \\($errs\\) { $errs } else { '\\\\''exp3/run.ps1: OK'\\\\'' } }')",
       "Bash(powershell *)",
       "Bash(python3 -c ' *)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(aws ecs describe-services *)",
+      "Bash(aws dynamodb scan *)",
+      "Bash(aws logs describe-log-groups *)",
+      "Bash(aws logs *)",
+      "PowerShell(aws s3 ls *)",
+      "PowerShell(aws s3 rm *)",
+      "PowerShell(aws sqs get-queue-attributes *)",
+      "PowerShell(aws sqs purge-queue *)",
+      "Bash(python3 *)",
+      "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_100tpm --submitted 199 --failed 0 --actual-rate 99.5 --since 2026-04-20T17:53:30Z --until 2026-04-20T17:55:30Z --output experiments/exp2/results/5node_windowed.csv)",
+      "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_500tpm --submitted 998 --failed 0 --actual-rate 499.0 --since 2026-04-20T17:57:30Z --until 2026-04-20T17:59:30Z --output experiments/exp2/results/5node_windowed.csv)",
+      "Bash(python experiments/metrics-collector/collect.py --region us-east-1 --table raft-coordinator-experiment-tasks --label 5node_1000tpm --submitted 1996 --failed 0 --actual-rate 998.0 --since 2026-04-20T18:01:30Z --until 2026-04-20T18:03:30Z --output experiments/exp2/results/5node_windowed.csv)",
+      "Bash(python experiments/exp2/plot_exp2.py)"
     ]
   }
 }

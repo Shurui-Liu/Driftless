@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass
 
 import boto3
+from botocore.exceptions import ClientError
 
 from config import Config
 
@@ -81,10 +82,19 @@ class ChaosInjector:
             VisibilityTimeout=10,
         )
         msgs = resp.get("Messages", [])
+        redelivered = 0
         for msg in msgs:
-            self.sqs.change_message_visibility(
-                QueueUrl=queue_url,
-                ReceiptHandle=msg["ReceiptHandle"],
-                VisibilityTimeout=0,
-            )
-        return len(msgs)
+            try:
+                self.sqs.change_message_visibility(
+                    QueueUrl=queue_url,
+                    ReceiptHandle=msg["ReceiptHandle"],
+                    VisibilityTimeout=0,
+                )
+                redelivered += 1
+            except ClientError as e:
+                # Receipt handle already invalid — message was processed and deleted.
+                # This is expected when the coordinator is fast; skip silently.
+                code = e.response.get("Error", {}).get("Code", "")
+                if code not in ("InvalidParameterValue", "ReceiptHandleIsInvalid"):
+                    raise
+        return redelivered

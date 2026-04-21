@@ -1,0 +1,14 @@
+{
+  "submitted": 500,
+  "completed": 500,
+  "timed_out": 0,
+  "lost": 0,
+  "leader_kills": 1,
+  "follower_kills": 1,
+  "sqs_redeliveries_injected": 6,
+  "duplicate_dispatches": 0,
+  "max_receive_count": 1,
+  "stuck_pending": 0,
+  "stuck_assigned": 0,
+  "linearizability_violations": 0
+}
